@@ -1,0 +1,29 @@
+{
+    "manifest_version": 2,
+    "name": "GPT Text Helper",
+    "version": "1.0",
+    "description": "Process selected text with GPT models using custom prompts",
+    "permissions": [
+      "contextMenus",
+      "storage",
+      "activeTab",
+      "https://api.openai.com/*"
+    ],
+    "background": {
+      "scripts": ["background.js"]
+    },
+    "options_ui": {
+      "page": "options.html"
+    },
+    "icons": {
+      "48": "icons/icon-48.png",
+      "96": "icons/icon-96.png",
+      "128": "icons/icon-128.png"
+    },
+    "browser_specific_settings": {
+      "gecko": {
+        "id": "gpthelper@tuodominio.com",
+        "strict_min_version": "57.0"
+      }
+    }
+  }
