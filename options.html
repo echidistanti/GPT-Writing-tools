@@ -76,27 +76,27 @@
   </style>
 </head>
 <body>
-  <h2>Impostazioni GPT Helper</h2>
+  <h2 data-i18n="settingsTitle"></h2>
   
   <div class="form-group">
-    <label>API Key OpenAI:</label>
+    <label data-i18n="apiKeyLabel"></label>
     <input type="text" id="apiKey">
   </div>
   
   <div class="form-group">
-    <label>Modello:</label>
+    <label data-i18n="modelLabel"></label>
     <select id="model">
-      <option value="">Caricamento modelli...</option>
+      <option value="">Loading models...</option>
     </select>
   </div>
   
-  <h3>Gestione Prompt</h3>
+  <h3 data-i18n="promptsManagementTitle"></h3>
   <table id="promptsTable">
     <thead>
       <tr>
-        <th>Nome</th>
-        <th>Prompt</th>
-        <th>Azioni</th>
+        <th data-i18n="columnName"></th>
+        <th data-i18n="columnPrompt"></th>
+        <th data-i18n="columnActions"></th>
       </tr>
     </thead>
     <tbody>
@@ -104,9 +104,9 @@
   </table>
   
   <div class="button-group">
-    <button class="button" id="addPrompt">Aggiungi Prompt</button>
-    <button class="button save" id="savePrompts">Salva Modifiche</button>
-    <span id="saveStatus" class="save-status">Modifiche salvate!</span>
+    <button class="button" id="addPrompt" data-i18n="buttonAdd"></button>
+    <button class="button save" id="savePrompts" data-i18n="buttonSave"></button>
+    <span id="saveStatus" class="save-status" data-i18n="saveSuccess"></span>
   </div>
 
   <script src="options.js"></script>

@@ -1,0 +1,89 @@
+{
+    "extName": {
+      "message": "GPT Text Helper"
+    },
+    "extDescription": {
+      "message": "Elabora il testo selezionato con modelli GPT usando prompt personalizzati"
+    },
+    "settingsTitle": {
+      "message": "Impostazioni GPT Helper"
+    },
+    "apiKeyLabel": {
+      "message": "API Key OpenAI:"
+    },
+    "modelLabel": {
+      "message": "Modello:"
+    },
+    "promptsManagementTitle": {
+      "message": "Gestione Prompt"
+    },
+    "columnName": {
+      "message": "Nome"
+    },
+    "columnPrompt": {
+      "message": "Prompt"
+    },
+    "columnActions": {
+      "message": "Azioni"
+    },
+    "buttonAdd": {
+      "message": "Aggiungi Prompt"
+    },
+    "buttonSave": {
+      "message": "Salva Modifiche"
+    },
+    "buttonDelete": {
+      "message": "Elimina"
+    },
+    "saveSuccess": {
+      "message": "Modifiche salvate!"
+    },
+    "confirmDelete": {
+      "message": "Sei sicuro di voler eliminare questo prompt?"
+    },
+    "newPromptName": {
+      "message": "Nuovo Prompt"
+    },
+    "newPromptText": {
+      "message": "Inserisci il testo del prompt"
+    },
+    "errorLoadingSettings": {
+      "message": "Errore nel caricamento delle impostazioni"
+    },
+    "errorLoadingModels": {
+      "message": "Errore nel caricamento dei modelli. Verifica la tua API key."
+    },
+    "errorSavingPrompts": {
+      "message": "Errore durante il salvataggio dei prompt"
+    },
+    "errorSavingSettings": {
+      "message": "Errore durante il salvataggio delle impostazioni"
+    },
+    "errorProcessingText": {
+      "message": "Errore durante l'elaborazione del testo"
+    },
+    "errorShowingResult": {
+      "message": "Errore durante la visualizzazione del risultato"
+    },
+    "errorCopying": {
+      "message": "Errore durante la copia del testo"
+    },
+    "contextMenuTitle": {
+      "message": "GPT Helper"
+    },
+    "resultTitle": {
+      "message": "Risultato GPT"
+    },
+    "originalTextLabel": {
+      "message": "Testo originale:"
+    },
+    "resultTextLabel": {
+      "message": "Risultato:"
+    },
+    "copyButton": {
+      "message": "Copia risultato"
+    },
+    "copiedStatus": {
+      "message": "Copiato!"
+    }
+  }

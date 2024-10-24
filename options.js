@@ -1,41 +1,81 @@
-// options.js
 let prompts = [];
 let originalPrompts = [];
 let hasUnsavedChanges = false;
+
+// Funzione di utilità per ottenere le stringhe localizzate
+function getMessage(key) {
+  return browser.i18n.getMessage(key) || key;
+}
+
+// Funzione per inizializzare le traduzioni nell'HTML
+function initializeI18n() {
+  document.querySelectorAll('[data-i18n]').forEach(element => {
+    const key = element.getAttribute('data-i18n');
+    element.textContent = getMessage(key);
+  });
+}
+
+// Funzione per impostare i prompt predefiniti
+function getDefaultPrompts() {
+  return [
+    { 
+      id: 1, 
+      name: getMessage('newPromptName'), 
+      prompt: getMessage('newPromptText')
+    },
+    {
+      id: 2,
+      name: "Traduci in inglese",
+      prompt: "Translate the following text to English while maintaining its original meaning and tone:"
+    },
+    {
+      id: 3,
+      name: "Correggi errori",
+      prompt: "Check the following text for grammatical and spelling errors, then provide the corrected version:"
+    }
+  ];
+}
 
 // Carica le impostazioni salvate
 async function loadSettings() {
   try {
     const result = await browser.storage.local.get(['apiKey', 'selectedModel', 'prompts']);
-    document.getElementById('apiKey').value = result.apiKey || '';
     
-    // Assicuriamoci che prompts sia sempre un array
+    // Imposta API Key
+    const apiKeyInput = document.getElementById('apiKey');
+    if (apiKeyInput) {
+      apiKeyInput.value = result.apiKey || '';
+    }
+    
+    // Imposta i prompt
     if (Array.isArray(result.prompts) && result.prompts.length > 0) {
       prompts = result.prompts;
     } else {
-      prompts = [
-        { id: 1, name: 'Traduci in inglese', prompt: 'Translate this text to English:' },
-        { id: 2, name: 'Correggi', prompt: 'Fix any errors in this text:' }
-      ];
-      // Salva i prompt predefiniti se non ce ne sono
+      prompts = getDefaultPrompts();
+      // Salva i prompt predefiniti
       await browser.storage.local.set({ prompts });
     }
     
     // Crea una copia profonda dei prompt originali
     originalPrompts = JSON.parse(JSON.stringify(prompts));
     
+    // Se c'è una API key, carica i modelli
     if (result.apiKey) {
       await loadModels(result.apiKey);
       if (result.selectedModel) {
-        document.getElementById('model').value = result.selectedModel;
+        const modelSelect = document.getElementById('model');
+        if (modelSelect) {
+          modelSelect.value = result.selectedModel;
+        }
       }
     }
     
+    // Aggiorna la tabella e lo stato del pulsante
     updatePromptsTable();
     updateSaveButtonState();
   } catch (error) {
     console.error('Error loading settings:', error);
-    alert('Errore nel caricamento delle impostazioni');
+    alert(getMessage('errorLoadingSettings'));
   }
 }
 
@@ -47,6 +87,11 @@ async function loadModels(apiKey) {
         'Authorization': `Bearer ${apiKey}`
       }
     });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
     const data = await response.json();
     
     const modelSelect = document.getElementById('model');
@@ -63,7 +108,7 @@ async function loadModels(apiKey) {
       });
   } catch (error) {
     console.error('Error loading models:', error);
-    alert('Errore nel caricamento dei modelli. Verifica la tua API key.');
+    alert(getMessage('errorLoadingModels'));
   }
 }
 
@@ -77,6 +122,8 @@ function escapeHtml(str) {
 // Aggiorna la tabella dei prompt
 function updatePromptsTable() {
   const tbody = document.querySelector('#promptsTable tbody');
+  if (!tbody) return;
+  
   tbody.innerHTML = '';
   
   prompts.forEach(prompt => {
@@ -103,7 +150,9 @@ function updatePromptsTable() {
                class="prompt-input">
       </td>
       <td>
-        <button class="button delete" data-id="${prompt.id}">Elimina</button>
+        <button class="button delete" data-id="${prompt.id}">
+          ${getMessage('buttonDelete')}
+        </button>
       </td>
     `;
     tbody.appendChild(tr);
@@ -131,7 +180,6 @@ function updatePromptsTable() {
 function updatePrompt(id, field, value) {
   const promptIndex = prompts.findIndex(p => p.id === id);
   if (promptIndex !== -1) {
-    // Aggiorna solo l'array in memoria
     prompts[promptIndex] = {
       ...prompts[promptIndex],
       [field]: value
@@ -146,8 +194,8 @@ function addNewPrompt() {
   const maxId = prompts.reduce((max, p) => Math.max(max, p.id), 0);
   const newPrompt = {
     id: maxId + 1,
-    name: 'Nuovo Prompt',
-    prompt: 'Inserisci il testo del prompt'
+    name: getMessage('newPromptName'),
+    prompt: getMessage('newPromptText')
   };
   
   prompts = [...prompts, newPrompt];
@@ -158,7 +206,7 @@ function addNewPrompt() {
 
 // Elimina prompt
 function deletePrompt(id) {
-  if (confirm('Sei sicuro di voler eliminare questo prompt?')) {
+  if (confirm(getMessage('confirmDelete'))) {
     prompts = prompts.filter(p => p.id !== id);
     hasUnsavedChanges = true;
     updatePromptsTable();
@@ -177,48 +225,147 @@ async function savePrompts() {
     showSaveStatus();
   } catch (error) {
     console.error('Error saving prompts:', error);
-    alert('Errore durante il salvataggio dei prompt');
+    alert(getMessage('errorSavingPrompts'));
   }
 }
 
 // Aggiorna lo stato del pulsante salva
 function updateSaveButtonState() {
   const saveButton = document.getElementById('savePrompts');
-  saveButton.disabled = !hasUnsavedChanges;
-  saveButton.style.opacity = hasUnsavedChanges ? '1' : '0.5';
+  if (saveButton) {
+    saveButton.disabled = !hasUnsavedChanges;
+    saveButton.style.opacity = hasUnsavedChanges ? '1' : '0.5';
+  }
 }
 
 // Mostra il messaggio di salvataggio
 function showSaveStatus() {
   const status = document.getElementById('saveStatus');
-  status.style.display = 'inline';
-  setTimeout(() => {
-    status.style.display = 'none';
-  }, 2000);
+  if (status) {
+    status.style.display = 'inline';
+    setTimeout(() => {
+      status.style.display = 'none';
+    }, 2000);
+  }
 }
 
 // Salva le impostazioni API e modello
 async function saveSettings() {
-  const apiKey = document.getElementById('apiKey').value;
-  const selectedModel = document.getElementById('model').value;
-  
-  try {
-    await browser.storage.local.set({
-      apiKey,
-      selectedModel
-    });
-    showSaveStatus();
-  } catch (error) {
-    console.error('Error saving settings:', error);
-    alert('Errore durante il salvataggio delle impostazioni');
+    const apiKey = document.getElementById('apiKey').value;
+    const modelSelect = document.getElementById('model');
+    const selectedModel = modelSelect.value;
+    
+    try {
+      // Salva sia l'API key che il modello
+      await browser.storage.local.set({
+        apiKey: apiKey,
+        selectedModel: selectedModel
+      });
+      
+      // Se c'è un'API key, prova a caricare i modelli
+      if (apiKey) {
+        await loadModels(apiKey);
+      }
+      
+      showSaveStatus();
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      alert(getMessage('errorSavingSettings'));
+    }
   }
-}
-
-// Event Listeners
-document.getElementById('apiKey').addEventListener('change', saveSettings);
-document.getElementById('model').addEventListener('change', saveSettings);
-document.getElementById('addPrompt').addEventListener('click', addNewPrompt);
-document.getElementById('savePrompts').addEventListener('click', savePrompts);
+  
+  // Carica i modelli disponibili
+  async function loadModels(apiKey) {
+    try {
+      const response = await fetch('https://api.openai.com/v1/models', {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      const modelSelect = document.getElementById('model');
+      modelSelect.innerHTML = '';
+      
+      // Aggiungi un'opzione vuota all'inizio
+      const defaultOption = document.createElement('option');
+      defaultOption.value = '';
+      defaultOption.textContent = 'Select a model...';
+      modelSelect.appendChild(defaultOption);
+      
+      // Filtra e ordina i modelli
+      data.data
+        .filter(model => model.id.startsWith('gpt'))
+        .sort((a, b) => a.id.localeCompare(b.id))
+        .forEach(model => {
+          const option = document.createElement('option');
+          option.value = model.id;
+          option.textContent = model.id;
+          modelSelect.appendChild(option);
+        });
+        
+      // Recupera il modello salvato
+      const result = await browser.storage.local.get('selectedModel');
+      if (result.selectedModel) {
+        modelSelect.value = result.selectedModel;
+      }
+    } catch (error) {
+      console.error('Error loading models:', error);
+      alert(getMessage('errorLoadingModels'));
+    }
+  }
+  
+  // Salva tutti i prompt
+  async function savePrompts() {
+    try {
+      // Salva i prompt nello storage locale
+      await browser.storage.local.set({ prompts: prompts });
+      
+      // Aggiorna lo stato locale
+      originalPrompts = JSON.parse(JSON.stringify(prompts));
+      hasUnsavedChanges = false;
+      
+      // Aggiorna l'interfaccia
+      updatePromptsTable();
+      updateSaveButtonState();
+      showSaveStatus();
+    } catch (error) {
+      console.error('Error saving prompts:', error);
+      alert(getMessage('errorSavingPrompts'));
+    }
+  }
+  
+  // Event Listeners
+  document.addEventListener('DOMContentLoaded', () => {
+    const apiKeyInput = document.getElementById('apiKey');
+    const modelSelect = document.getElementById('model');
+    const addPromptButton = document.getElementById('addPrompt');
+    const savePromptsButton = document.getElementById('savePrompts');
+  
+    if (apiKeyInput) {
+      // Salva quando l'input perde il focus
+      apiKeyInput.addEventListener('blur', saveSettings);
+    }
+  
+    if (modelSelect) {
+      // Salva quando cambia il modello selezionato
+      modelSelect.addEventListener('change', saveSettings);
+    }
+  
+    if (addPromptButton) {
+      addPromptButton.addEventListener('click', addNewPrompt);
+    }
+  
+    if (savePromptsButton) {
+      savePromptsButton.addEventListener('click', savePrompts);
+    }
+  });
+  
 
 // Conferma prima di uscire se ci sono modifiche non salvate
 window.addEventListener('beforeunload', (e) => {
@@ -229,4 +376,5 @@ window.addEventListener('beforeunload', (e) => {
 });
 
 // Inizializzazione
+initializeI18n();
 loadSettings();
