@@ -1,24 +1,29 @@
 {
-    "manifest_version": 2,
-    "name": "__MSG_extName__",
-    "description": "__MSG_extDescription__",
-    "version": "1.0",
-    "default_locale": "en",
-    "permissions": [
-      "contextMenus",
-      "storage",
-      "activeTab",
-      "https://api.openai.com/*"
-    ],
-    "background": {
-      "scripts": ["background.js"]
-    },
-    "options_ui": {
-      "page": "options.html"
-    },
-    "icons": {
-      "48": "icons/icon-48.png",
-      "96": "icons/icon-96.png",
-      "128": "icons/icon-128.png"
-    }
+  "manifest_version": 2,
+  "name": "__MSG_extName__",
+  "description": "__MSG_extDescription__",
+  "version": "1.0",
+  "default_locale": "en",
+  "permissions": [
+    "contextMenus",
+    "storage",
+    "activeTab",
+    "https://api.openai.com/*"
+  ],
+  "background": {
+    "scripts": ["background.js"]
+  },
+  "options_ui": {
+    "page": "options.html"
+  },
+  "web_accessible_resources": [
+    "styles/result.css",
+    "scripts/clipboard.js",
+    "scripts/result-view.js"
+  ],
+  "icons": {
+    "48": "icons/icon-48.png",
+    "96": "icons/icon-96.png",
+    "128": "icons/icon-128.png"
   }
+}
