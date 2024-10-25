@@ -1,98 +1,243 @@
+/* Reset base per il container principale */
 .gpt-helper-result {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    width: 400px;
-    background: white;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    z-index: 2147483647;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-    font-size: 14px;
-    line-height: 1.4;
+  all: revert;
+  position: fixed !important;
+  top: 20px !important;
+  right: 20px !important;
+  width: 400px !important;
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  z-index: 2147483647 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif !important;
+  font-size: 14px !important;
+  line-height: 1.4 !important;
+  color: #333333 !important;
+  box-sizing: border-box !important;
+}
+
+/* Reset per tutti gli elementi interni */
+.gpt-helper-result * {
+  all: revert;
+  box-sizing: border-box !important;
+  font-family: inherit !important;
+  line-height: inherit !important;
+}
+
+.gpt-helper-draghandle {
+  padding: 12px 16px !important;
+  background: #f8f9fa !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1) !important;
+  border-radius: 8px 8px 0 0 !important;
+  cursor: move !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  user-select: none !important;
+  margin: 0 !important;
+}
+
+.gpt-helper-title {
+  font-weight: 600 !important;
+  color: #1a1a1a !important;
+  font-size: 14px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.gpt-helper-close {
+  background: none !important;
+  border: none !important;
+  cursor: pointer !important;
+  font-size: 18px !important;
+  color: #666666 !important;
+  padding: 4px 8px !important;
+  border-radius: 4px !important;
+  margin: 0 !important;
+  line-height: 1 !important;
+}
+
+.gpt-helper-close:hover {
+  background: rgba(0, 0, 0, 0.05) !important;
+  color: #333333 !important;
+}
+
+.gpt-helper-content {
+  padding: 16px !important;
+  max-height: calc(80vh - 120px) !important;
+  overflow-y: auto !important;
+  background: #ffffff !important;
+  margin: 0 !important;
+}
+
+.gpt-helper-section {
+  margin: 0 0 16px 0 !important;
+  padding: 0 !important;
+}
+
+.gpt-helper-section:last-child {
+  margin-bottom: 0 !important;
+}
+
+.gpt-helper-section h4 {
+  margin: 0 0 8px 0 !important;
+  padding: 0 !important;
+  font-weight: 600 !important;
+  color: #1a1a1a !important;
+  font-size: 13px !important;
+}
+
+.gpt-helper-text {
+  background: #f8f9fa !important;
+  padding: 12px !important;
+  border-radius: 6px !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  white-space: pre-wrap !important;
+  word-wrap: break-word !important;
+  color: #333333 !important;
+  font-size: 13px !important;
+  margin: 0 !important;
+  line-height: 1.5 !important;
+}
+
+.gpt-helper-actions {
+  padding: 12px 16px !important;
+  border-top: 1px solid rgba(0, 0, 0, 0.1) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  background: #ffffff !important;
+  border-radius: 0 0 8px 8px !important;
+  margin: 0 !important;
+}
+
+.gpt-helper-button {
+  padding: 8px 16px !important;
+  background: #4CAF50 !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  transition: background-color 0.2s ease !important;
+  margin: 0 !important;
+}
+
+.gpt-helper-button:hover {
+  background: #45a049 !important;
+}
+
+.gpt-helper-status {
+  color: #666666 !important;
+  font-size: 13px !important;
+  display: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Scrollbar personalizzata */
+.gpt-helper-content::-webkit-scrollbar {
+  width: 8px !important;
+}
+
+.gpt-helper-content::-webkit-scrollbar-track {
+  background: #f1f1f1 !important;
+  border-radius: 4px !important;
+}
+
+.gpt-helper-content::-webkit-scrollbar-thumb {
+  background: #c1c1c1 !important;
+  border-radius: 4px !important;
+}
+
+.gpt-helper-content::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8 !important;
+}
+
+/* Dark Mode */
+@media (prefers-color-scheme: dark) {
+  .gpt-helper-result {
+    background: #2d2d2d !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    color: #e0e0e0 !important;
   }
-  
+
   .gpt-helper-draghandle {
-    padding: 10px;
-    background: #f5f5f5;
-    border-bottom: 1px solid #ddd;
-    border-radius: 5px 5px 0 0;
-    cursor: move;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    background: #383838 !important;
+    border-bottom-color: rgba(255, 255, 255, 0.1) !important;
   }
-  
+
   .gpt-helper-title {
-    font-weight: 500;
-    color: #333;
+    color: #e0e0e0 !important;
   }
-  
+
   .gpt-helper-close {
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 16px;
-    color: #666;
-    padding: 4px 8px;
-    border-radius: 4px;
+    color: #a0a0a0 !important;
   }
-  
+
   .gpt-helper-close:hover {
-    background: #e0e0e0;
-    color: #333;
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: #ffffff !important;
   }
-  
+
   .gpt-helper-content {
-    padding: 15px;
-    max-height: calc(80vh - 120px);
-    overflow-y: auto;
+    background: #2d2d2d !important;
   }
-  
-  .gpt-helper-section {
-    margin-bottom: 15px;
-  }
-  
+
   .gpt-helper-section h4 {
-    margin: 0 0 8px 0;
-    font-weight: 500;
-    color: #333;
+    color: #e0e0e0 !important;
   }
-  
+
   .gpt-helper-text {
-    background: #f5f5f5;
-    padding: 10px;
-    border-radius: 4px;
-    border: 1px solid #e0e0e0;
-    white-space: pre-wrap;
-    word-wrap: break-word;
+    background: #383838 !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    color: #e0e0e0 !important;
   }
-  
+
   .gpt-helper-actions {
-    padding: 10px 15px;
-    border-top: 1px solid #e0e0e0;
-    display: flex;
-    align-items: center;
-    gap: 10px;
+    background: #2d2d2d !important;
+    border-top-color: rgba(255, 255, 255, 0.1) !important;
   }
-  
+
   .gpt-helper-button {
-    padding: 8px 16px;
-    background: #4CAF50;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: background-color 0.2s;
+    background: #43a047 !important;
   }
-  
+
   .gpt-helper-button:hover {
-    background: #45a049;
+    background: #388e3c !important;
   }
-  
+
   .gpt-helper-status {
-    color: #666;
-    display: none;
+    color: #a0a0a0 !important;
   }
+
+  .gpt-helper-content::-webkit-scrollbar-track {
+    background: #383838 !important;
+  }
+
+  .gpt-helper-content::-webkit-scrollbar-thumb {
+    background: #666666 !important;
+  }
+
+  .gpt-helper-content::-webkit-scrollbar-thumb:hover {
+    background: #777777 !important;
+  }
+}
+
+/* Selezione del testo */
+.gpt-helper-text::selection,
+.gpt-helper-text *::selection {
+  background-color: rgba(76, 175, 80, 0.3) !important;
+  color: inherit !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  .gpt-helper-text::selection,
+  .gpt-helper-text *::selection {
+    background-color: rgba(76, 175, 80, 0.4) !important;
+  }
+}

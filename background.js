@@ -226,5 +226,10 @@ async function showResult(originalText, resultText, tab) {
   }
 }
 
+// Gestione click sull'icona dell'estensione
+browser.browserAction.onClicked.addListener(() => {
+  browser.runtime.openOptionsPage();
+});
+
 // Carica la configurazione all'avvio
 loadConfig();
