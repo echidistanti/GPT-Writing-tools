@@ -285,3 +285,51 @@
     background: linear-gradient(135deg, transparent 50%, rgba(255, 255, 255, 0.1) 50%) !important;
   }
 }
+/* Stili per il loading state */
+.gpt-helper-loading {
+  text-align: center !important;
+  padding: 20px !important;
+}
+
+.gpt-helper-spinner {
+  width: 40px !important;
+  height: 40px !important;
+  border: 3px solid #f3f3f3 !important;
+  border-top: 3px solid #4CAF50 !important;
+  border-radius: 50% !important;
+  animation: spin 1s linear infinite !important;
+  margin: 0 auto 16px auto !important;
+}
+
+.gpt-helper-loading-text {
+  color: #666666 !important;
+  font-size: 14px !important;
+  margin-top: 8px !important;
+}
+
+.gpt-helper-loading-subtext {
+  color: #888888 !important;
+  font-size: 12px !important;
+  margin-top: 4px !important;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Aggiungere nella sezione dark mode esistente */
+@media (prefers-color-scheme: dark) {
+  .gpt-helper-spinner {
+    border-color: #444444 !important;
+    border-top-color: #4CAF50 !important;
+  }
+
+  .gpt-helper-loading-text {
+    color: #a0a0a0 !important;
+  }
+
+  .gpt-helper-loading-subtext {
+    color: #808080 !important;
+  }
+}

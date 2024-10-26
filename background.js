@@ -33,6 +33,84 @@ async function loadConfig() {
   }
 }
 
+async function showLoadingWindow(tab) {
+  try {
+    await browser.tabs.insertCSS(tab.id, { file: 'styles/result.css' });
+    
+    const code = `
+    (function() {
+      // Clean up existing
+      document.querySelector('.gpt-helper-result')?.remove();
+
+      // Create loading window
+      const container = document.createElement('div');
+      container.className = 'gpt-helper-result';
+      
+      container.innerHTML = \`
+        <div class="gpt-helper-draghandle">
+          <span class="gpt-helper-title">${browser.i18n.getMessage('loadingTitle')}</span>
+          <button class="gpt-helper-close">✖</button>
+        </div>
+        <div class="gpt-helper-content" style="display: flex; justify-content: center; align-items: center; min-height: 150px;">
+          <div class="gpt-helper-loading">
+            <div class="gpt-helper-spinner"></div>
+            <div class="gpt-helper-loading-text">
+              ${browser.i18n.getMessage('loadingText')}
+              <div class="gpt-helper-loading-subtext">
+                ${browser.i18n.getMessage('loadingWait')}
+              </div>
+            </div>
+          </div>
+        </div>
+      \`;
+
+      // Setup drag functionality
+      let isDragging = false;
+      let currentX = 0, currentY = 0, initialX = 0, initialY = 0;
+      let xOffset = 0, yOffset = 0;
+
+      const dragHandle = container.querySelector('.gpt-helper-draghandle');
+      
+      dragHandle.addEventListener('mousedown', e => {
+        if (e.target === dragHandle || dragHandle.contains(e.target)) {
+          initialX = e.clientX - xOffset;
+          initialY = e.clientY - yOffset;
+          isDragging = true;
+        }
+      });
+
+      document.addEventListener('mousemove', e => {
+        if (isDragging) {
+          e.preventDefault();
+          currentX = e.clientX - initialX;
+          currentY = e.clientY - initialY;
+          xOffset = currentX;
+          yOffset = currentY;
+          container.style.transform = \`translate(\${currentX}px, \${currentY}px)\`;
+        }
+      });
+
+      document.addEventListener('mouseup', () => {
+        initialX = currentX;
+        initialY = currentY;
+        isDragging = false;
+      });
+
+      // Setup close button
+      container.querySelector('.gpt-helper-close').addEventListener('click', () => {
+        container.remove();
+      });
+
+      document.body.appendChild(container);
+    })();
+    `;
+
+    await browser.tabs.executeScript(tab.id, { code });
+  } catch (error) {
+    console.error('Error showing loading window:', error);
+  }
+}
+
 function setupEventListeners() {
   // Ascolta i cambiamenti nello storage
   browser.storage.onChanged.addListener((changes, area) => {
@@ -126,7 +204,10 @@ function validateInput(text, tab) {
 async function processText(text, promptText, tab) {
   if (!validateInput(text, tab)) return;
 
+  // Mostra subito la finestra di loading
   try {
+    await showLoadingWindow(tab);
+
     const estimatedTokens = estimateTokenCount(text);
     const response = await fetch(CONFIG.API_ENDPOINT, {
       method: 'POST',
@@ -160,6 +241,7 @@ async function processText(text, promptText, tab) {
     showAlert(tab, `${browser.i18n.getMessage('errorProcessingText')}: ${error.message}`);
   }
 }
+
 
 // UI Component
 async function showResult(originalText, resultText, tab) {

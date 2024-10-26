@@ -91,5 +91,16 @@
     },
     "textTooLong": {
       "message": "The selected text is too long. Please select a shorter text."
-    }
+    },
+      "loadingTitle": {
+        "message": "Processing"
+      },
+      "loadingText": {
+        "message": "Processing your text..."
+      },
+      "loadingWait": {
+        "message": "Please wait"
+      }
+    
+    
   }
