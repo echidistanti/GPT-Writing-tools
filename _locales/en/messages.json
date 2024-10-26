@@ -85,5 +85,11 @@
     },
     "copiedStatus": {
       "message": "Copied!"
+    },
+    "noTextSelected": {
+      "message": "Please select some text."
+    },
+    "textTooLong": {
+      "message": "The selected text is too long. Please select a shorter text."
     }
   }

@@ -85,5 +85,11 @@
     },
     "copiedStatus": {
       "message": "Copiato!"
+    },
+    "noTextSelected": {
+      "message": "Per favore seleziona del testo prima di utilizzare questa funzione."
+    },
+    "textTooLong": {
+      "message": "Il testo selezionato è troppo lungo. Per favore seleziona un testo più breve."
     }
   }

@@ -1,43 +1,70 @@
-let apiKey = '';
-let selectedModel = '';
-let prompts = [];
+// Configurazione
+const CONFIG = {
+  MAX_TOKENS: 4000,
+  API_ENDPOINT: 'https://api.openai.com/v1/chat/completions',
+  TOKEN_RATIO: 4, // caratteri per token (stima)
+};
 
-// Carica la configurazione all'avvio
+// Stato dell'estensione
+let state = {
+  apiKey: '',
+  selectedModel: '',
+  prompts: []
+};
+
+// Inizializzazione
+async function init() {
+  await loadConfig();
+  setupEventListeners();
+  createContextMenus();
+}
+
+// Gestione della configurazione
 async function loadConfig() {
   try {
     const result = await browser.storage.local.get(['apiKey', 'selectedModel', 'prompts']);
-    apiKey = result.apiKey || '';
-    selectedModel = result.selectedModel || '';
-    prompts = Array.isArray(result.prompts) ? result.prompts : [];
-    createContextMenus();
+    state = {
+      apiKey: result.apiKey || '',
+      selectedModel: result.selectedModel || '',
+      prompts: Array.isArray(result.prompts) ? result.prompts : []
+    };
   } catch (error) {
-    console.error('Error loading config:', error);
+    console.error('Error loading configuration:', error);
   }
 }
 
-// Ascolta i cambiamenti nello storage
-browser.storage.onChanged.addListener((changes, area) => {
-  if (area === 'local') {
-    if (changes.apiKey) apiKey = changes.apiKey.newValue;
-    if (changes.selectedModel) selectedModel = changes.selectedModel.newValue;
-    if (changes.prompts) {
-      prompts = changes.prompts.newValue;
-      createContextMenus();
+function setupEventListeners() {
+  // Ascolta i cambiamenti nello storage
+  browser.storage.onChanged.addListener((changes, area) => {
+    if (area === 'local') {
+      if (changes.apiKey) state.apiKey = changes.apiKey.newValue;
+      if (changes.selectedModel) state.selectedModel = changes.selectedModel.newValue;
+      if (changes.prompts) {
+        state.prompts = changes.prompts.newValue;
+        createContextMenus();
+      }
     }
-  }
-});
+  });
 
-// Crea i menu contestuali
+  // Gestione click sull'icona dell'estensione
+  browser.browserAction.onClicked.addListener(() => {
+    browser.runtime.openOptionsPage();
+  });
+}
+
+// Gestione menu contestuale
 function createContextMenus() {
   browser.contextMenus.removeAll().then(() => {
+    // Menu principale
     browser.contextMenus.create({
       id: 'gpt-menu',
       title: browser.i18n.getMessage('contextMenuTitle'),
       contexts: ['selection']
     });
 
-    if (Array.isArray(prompts)) {
-      prompts.forEach(prompt => {
+    // Sottomenu per ogni prompt
+    if (Array.isArray(state.prompts)) {
+      state.prompts.forEach(prompt => {
         browser.contextMenus.create({
           id: `prompt-${prompt.id}`,
           parentId: 'gpt-menu',
@@ -49,187 +76,240 @@ function createContextMenus() {
   });
 }
 
-// Gestisce il click sul menu
+// Gestione click sul menu
 browser.contextMenus.onClicked.addListener((info, tab) => {
   const promptId = parseInt(info.menuItemId.split('-')[1]);
-  const prompt = prompts.find(p => p.id === promptId);
+  const prompt = state.prompts.find(p => p.id === promptId);
   
   if (prompt) {
     processText(info.selectionText, prompt.prompt, tab);
   }
 });
 
-// Processa il testo con GPT
-async function processText(text, promptText, tab) {
-  if (!apiKey || !selectedModel) {
-    browser.tabs.executeScript(tab.id, {
-      code: `alert('Please configure your API key and select a model in the extension settings.')`
-    });
-    return;
+// Utilities
+function estimateTokenCount(text) {
+  return Math.ceil(text.length / CONFIG.TOKEN_RATIO);
+}
+
+function showAlert(tab, message) {
+  return browser.tabs.executeScript(tab.id, {
+    code: `alert(${JSON.stringify(message)})`
+  });
+}
+
+// Validazione input
+function validateInput(text, tab) {
+  if (!text?.trim()) {
+    showAlert(tab, browser.i18n.getMessage('noTextSelected') || 'Please select some text first.');
+    return false;
   }
 
+  if (!state.apiKey || !state.selectedModel) {
+    showAlert(tab, 'Please configure your API key and select a model in the extension settings.');
+    return false;
+  }
+
+  const estimatedTokens = estimateTokenCount(text);
+  if (estimatedTokens > CONFIG.MAX_TOKENS) {
+    const message = `Selected text is too long (approximately ${estimatedTokens} tokens).
+    Please select shorter text (maximum ${CONFIG.MAX_TOKENS} tokens).
+    
+    Tip: Try splitting the text into smaller sections.`;
+    showAlert(tab, message);
+    return false;
+  }
+
+  return true;
+}
+
+// Processo principale
+async function processText(text, promptText, tab) {
+  if (!validateInput(text, tab)) return;
+
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const estimatedTokens = estimateTokenCount(text);
+    const response = await fetch(CONFIG.API_ENDPOINT, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
+        'Authorization': `Bearer ${state.apiKey}`
       },
       body: JSON.stringify({
-        model: selectedModel,
+        model: state.selectedModel,
         messages: [
           { role: 'system', content: promptText },
           { role: 'user', content: text }
-        ]
+        ],
+        max_tokens: Math.min(CONFIG.MAX_TOKENS, 16000 - estimatedTokens)
       })
     });
 
     const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.error?.message || 'API request failed');
+    }
+    
     if (result.error) {
       throw new Error(result.error.message);
     }
-    
+
     await showResult(text, result.choices[0].message.content, tab);
   } catch (error) {
-    console.error('Error:', error);
-    browser.tabs.executeScript(tab.id, {
-      code: `alert('${browser.i18n.getMessage('errorProcessingText')}: ${error.message}')`
-    });
+    console.error('Processing error:', error);
+    showAlert(tab, `${browser.i18n.getMessage('errorProcessingText')}: ${error.message}`);
   }
 }
 
-// Mostra il risultato
+// UI Component
 async function showResult(originalText, resultText, tab) {
   try {
-    // Inietta i CSS
-    await browser.tabs.insertCSS(tab.id, { file: 'styles/result.css' });
+    // Get extension URL for the CSS file
+    const cssUrl = browser.runtime.getURL('styles/result.css');
     
-    // Inietta il codice per mostrare il risultato
+    // Inject CSS using the full URL
+    await browser.tabs.insertCSS(tab.id, { 
+      file: 'styles/result.css'
+    });
+    
     const code = `
-      (function() {
-        // Funzioni di utility
-        function copyToClipboard(text, statusElement, buttonElement) {
-          try {
-            navigator.clipboard.writeText(text).then(() => {
-              showCopyFeedback(statusElement, buttonElement);
-            });
-          } catch (err) {
-            console.error('Error copying text:', err);
-          }
-        }
+    (function() {
+      // Utility Functions
+      function copyToClipboard(text, button) {
+        navigator.clipboard.writeText(text)
+          .then(() => showCopyFeedback(button))
+          .catch(err => {
+            console.error('Copy error:', err);
+            button.classList.add('error');
+            setTimeout(() => button.classList.remove('error'), 2000);
+          });
+      }
 
-        function showCopyFeedback(statusElement, buttonElement) {
-          statusElement.style.display = 'inline';
-          buttonElement.style.backgroundColor = '#45a049';
-          
-          setTimeout(() => {
-            statusElement.style.display = 'none';
-            buttonElement.style.backgroundColor = '#4CAF50';
-          }, 2000);
-        }
-
-        // Rimuovi risultato esistente se presente
-        const existingResult = document.querySelector('.gpt-helper-result');
-        if (existingResult) {
-          existingResult.remove();
-        }
-
-        // Crea il nuovo contenitore risultato
-        const container = document.createElement('div');
-        container.className = 'gpt-helper-result';
+      function showCopyFeedback(button) {
+        const originalText = button.textContent;
+        button.classList.add('copied');
+        button.textContent = '${browser.i18n.getMessage('copiedStatus')}';
         
-        container.innerHTML = \`
-          <div class="gpt-helper-draghandle">
-            <span class="gpt-helper-title">${browser.i18n.getMessage('resultTitle')}</span>
-            <button class="gpt-helper-close">✖</button>
-          </div>
-          <div class="gpt-helper-content">
-            <div class="gpt-helper-section">
-              <h4>${browser.i18n.getMessage('originalTextLabel')}</h4>
-              <div class="gpt-helper-text">${originalText.replace(/"/g, '&quot;')}</div>
-            </div>
-            <div class="gpt-helper-section">
-              <h4>${browser.i18n.getMessage('resultTextLabel')}</h4>
-              <div class="gpt-helper-text">${resultText.replace(/"/g, '&quot;')}</div>
-            </div>
-          </div>
-          <div class="gpt-helper-actions">
-            <button class="gpt-helper-button">
-              ${browser.i18n.getMessage('copyButton')}
-            </button>
-            <span class="gpt-helper-status">
-              ${browser.i18n.getMessage('copiedStatus')}
-            </span>
-          </div>
-        \`;
+        setTimeout(() => {
+          button.classList.remove('copied');
+          button.textContent = originalText;
+        }, 2000);
+      }
 
-        // Setup drag and drop
-        const dragHandle = container.querySelector('.gpt-helper-draghandle');
-        let isDragging = false;
-        let currentX;
-        let currentY;
-        let initialX;
-        let initialY;
-        let xOffset = 0;
-        let yOffset = 0;
+      function saveWindowSize(container) {
+        const size = {
+          width: container.offsetWidth,
+          height: container.offsetHeight
+        };
+        localStorage.setItem('gptHelperWindowSize', JSON.stringify(size));
+      }
 
-        dragHandle.addEventListener('mousedown', e => {
+      function loadWindowSize() {
+        try {
+          return JSON.parse(localStorage.getItem('gptHelperWindowSize')) || { width: 400, height: 500 };
+        } catch {
+          return { width: 400, height: 500 };
+        }
+      }
+
+      // Clean up existing
+      document.querySelector('.gpt-helper-result')?.remove();
+
+      // Create new result window
+      const container = document.createElement('div');
+      container.className = 'gpt-helper-result';
+      
+      const savedSize = loadWindowSize();
+      Object.assign(container.style, {
+        width: savedSize.width + 'px',
+        height: savedSize.height + 'px'
+      });
+
+      container.innerHTML = \`
+        <div class="gpt-helper-draghandle">
+          <span class="gpt-helper-title">${browser.i18n.getMessage('resultTitle')}</span>
+          <button class="gpt-helper-close">✖</button>
+        </div>
+        <div class="gpt-helper-content">
+          <div class="gpt-helper-section">
+            <h4>${browser.i18n.getMessage('originalTextLabel')}</h4>
+            <div class="gpt-helper-text">${originalText.replace(/"/g, '&quot;')}</div>
+          </div>
+          <div class="gpt-helper-section">
+            <h4>${browser.i18n.getMessage('resultTextLabel')}</h4>
+            <div class="gpt-helper-text">${resultText.replace(/"/g, '&quot;')}</div>
+          </div>
+        </div>
+        <div class="gpt-helper-actions">
+          <button class="gpt-helper-button">${browser.i18n.getMessage('copyButton')}</button>
+        </div>
+      \`;
+
+      // Setup dragging
+      let isDragging = false;
+      let currentX = 0, currentY = 0, initialX = 0, initialY = 0;
+      let xOffset = 0, yOffset = 0;
+
+      const dragHandle = container.querySelector('.gpt-helper-draghandle');
+      
+      dragHandle.addEventListener('mousedown', e => {
+        if (e.target === dragHandle || dragHandle.contains(e.target)) {
           initialX = e.clientX - xOffset;
           initialY = e.clientY - yOffset;
-          if (e.target === dragHandle || dragHandle.contains(e.target)) {
-            isDragging = true;
-          }
-        });
+          isDragging = true;
+        }
+      });
 
-        document.addEventListener('mousemove', e => {
-          if (isDragging) {
-            e.preventDefault();
-            currentX = e.clientX - initialX;
-            currentY = e.clientY - initialY;
-            xOffset = currentX;
-            yOffset = currentY;
+      document.addEventListener('mousemove', e => {
+        if (isDragging) {
+          e.preventDefault();
+          currentX = e.clientX - initialX;
+          currentY = e.clientY - initialY;
+          xOffset = currentX;
+          yOffset = currentY;
+          container.style.transform = \`translate(\${currentX}px, \${currentY}px)\`;
+        }
+      });
 
-            container.style.transform = \`translate(\${currentX}px, \${currentY}px)\`;
-          }
-        });
+      document.addEventListener('mouseup', () => {
+        initialX = currentX;
+        initialY = currentY;
+        isDragging = false;
+      });
 
-        document.addEventListener('mouseup', () => {
-          initialX = currentX;
-          initialY = currentY;
-          isDragging = false;
-        });
+      // Setup resizing
+      const resizeObserver = new ResizeObserver(() => {
+        if (!container.classList.contains('resizing')) {
+          container.classList.add('resizing');
+          setTimeout(() => {
+            saveWindowSize(container);
+            container.classList.remove('resizing');
+          }, 100);
+        }
+      });
 
-        // Setup event listeners
-        const closeButton = container.querySelector('.gpt-helper-close');
-        const copyButton = container.querySelector('.gpt-helper-button');
-        const copyStatus = container.querySelector('.gpt-helper-status');
+      resizeObserver.observe(container);
 
-        closeButton.addEventListener('click', () => {
-          container.remove();
-        });
+      // Setup event handlers
+      container.querySelector('.gpt-helper-close').addEventListener('click', () => {
+        resizeObserver.disconnect();
+        container.remove();
+      });
 
-        copyButton.addEventListener('click', () => {
-          copyToClipboard(${JSON.stringify(resultText)}, copyStatus, copyButton);
-        });
+      container.querySelector('.gpt-helper-button').addEventListener('click', (e) => {
+        copyToClipboard(${JSON.stringify(resultText)}, e.target);
+      });
 
-        // Aggiungi il container al documento
-        document.body.appendChild(container);
-      })();
+      document.body.appendChild(container);
+    })();
     `;
 
     await browser.tabs.executeScript(tab.id, { code });
   } catch (error) {
-    console.error('Error showing result:', error);
-    browser.tabs.executeScript(tab.id, {
-      code: `alert('${browser.i18n.getMessage('errorShowingResult')}: ${error.message}')`
-    });
+    console.error('UI error:', error);
+    showAlert(tab, `${browser.i18n.getMessage('errorShowingResult')}: ${error.message}`);
   }
 }
 
-// Gestione click sull'icona dell'estensione
-browser.browserAction.onClicked.addListener(() => {
-  browser.runtime.openOptionsPage();
-});
-
-// Carica la configurazione all'avvio
-loadConfig();
+// Inizializza l'estensione
+init();

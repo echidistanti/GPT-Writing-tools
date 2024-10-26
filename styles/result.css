@@ -4,6 +4,8 @@
   position: fixed !important;
   top: 20px !important;
   right: 20px !important;
+  min-width: 300px !important;
+  min-height: 200px !important;
   width: 400px !important;
   background: #ffffff !important;
   border: 1px solid rgba(0, 0, 0, 0.1) !important;
@@ -17,6 +19,10 @@
   line-height: 1.4 !important;
   color: #333333 !important;
   box-sizing: border-box !important;
+  resize: both !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
 }
 
 /* Reset per tutti gli elementi interni */
@@ -27,6 +33,7 @@
   line-height: inherit !important;
 }
 
+/* Barra superiore con drag handle */
 .gpt-helper-draghandle {
   padding: 12px 16px !important;
   background: #f8f9fa !important;
@@ -40,6 +47,7 @@
   margin: 0 !important;
 }
 
+/* Titolo nella barra superiore */
 .gpt-helper-title {
   font-weight: 600 !important;
   color: #1a1a1a !important;
@@ -48,6 +56,7 @@
   padding: 0 !important;
 }
 
+/* Pulsante di chiusura */
 .gpt-helper-close {
   background: none !important;
   border: none !important;
@@ -65,14 +74,18 @@
   color: #333333 !important;
 }
 
+/* Contenuto principale */
 .gpt-helper-content {
+  flex: 1 1 auto !important;
   padding: 16px !important;
   max-height: calc(80vh - 120px) !important;
   overflow-y: auto !important;
   background: #ffffff !important;
   margin: 0 !important;
+  min-height: 0 !important;
 }
 
+/* Sezioni di contenuto */
 .gpt-helper-section {
   margin: 0 0 16px 0 !important;
   padding: 0 !important;
@@ -82,6 +95,7 @@
   margin-bottom: 0 !important;
 }
 
+/* Titoli delle sezioni */
 .gpt-helper-section h4 {
   margin: 0 0 8px 0 !important;
   padding: 0 !important;
@@ -90,6 +104,7 @@
   font-size: 13px !important;
 }
 
+/* Box di testo */
 .gpt-helper-text {
   background: #f8f9fa !important;
   padding: 12px !important;
@@ -103,6 +118,7 @@
   line-height: 1.5 !important;
 }
 
+/* Barra delle azioni */
 .gpt-helper-actions {
   padding: 12px 16px !important;
   border-top: 1px solid rgba(0, 0, 0, 0.1) !important;
@@ -114,6 +130,7 @@
   margin: 0 !important;
 }
 
+/* Pulsante di azione principale */
 .gpt-helper-button {
   padding: 8px 16px !important;
   background: #4CAF50 !important;
@@ -131,6 +148,13 @@
   background: #45a049 !important;
 }
 
+/* Stato pulsante copiato */
+.gpt-helper-button.copied {
+  background: #45a049 !important;
+  pointer-events: none !important;
+}
+
+/* Stato di errore */
 .gpt-helper-status {
   color: #666666 !important;
   font-size: 13px !important;
@@ -156,6 +180,27 @@
 
 .gpt-helper-content::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8 !important;
+}
+
+/* Cursore di ridimensionamento personalizzato */
+.gpt-helper-result::after {
+  content: '' !important;
+  position: absolute !important;
+  bottom: 0 !important;
+  right: 0 !important;
+  width: 15px !important;
+  height: 15px !important;
+  cursor: se-resize !important;
+  background: linear-gradient(135deg, transparent 50%, rgba(0, 0, 0, 0.1) 50%) !important;
+  border-radius: 0 0 8px 0 !important;
+  pointer-events: none !important;
+}
+
+/* Selezione del testo */
+.gpt-helper-text::selection,
+.gpt-helper-text *::selection {
+  background-color: rgba(76, 175, 80, 0.3) !important;
+  color: inherit !important;
 }
 
 /* Dark Mode */
@@ -198,6 +243,11 @@
     color: #e0e0e0 !important;
   }
 
+  .gpt-helper-text::selection,
+  .gpt-helper-text *::selection {
+    background-color: rgba(76, 175, 80, 0.4) !important;
+  }
+
   .gpt-helper-actions {
     background: #2d2d2d !important;
     border-top-color: rgba(255, 255, 255, 0.1) !important;
@@ -208,6 +258,10 @@
   }
 
   .gpt-helper-button:hover {
+    background: #388e3c !important;
+  }
+
+  .gpt-helper-button.copied {
     background: #388e3c !important;
   }
 
@@ -226,18 +280,8 @@
   .gpt-helper-content::-webkit-scrollbar-thumb:hover {
     background: #777777 !important;
   }
-}
 
-/* Selezione del testo */
-.gpt-helper-text::selection,
-.gpt-helper-text *::selection {
-  background-color: rgba(76, 175, 80, 0.3) !important;
-  color: inherit !important;
-}
-
-@media (prefers-color-scheme: dark) {
-  .gpt-helper-text::selection,
-  .gpt-helper-text *::selection {
-    background-color: rgba(76, 175, 80, 0.4) !important;
+  .gpt-helper-result::after {
+    background: linear-gradient(135deg, transparent 50%, rgba(255, 255, 255, 0.1) 50%) !important;
   }
 }

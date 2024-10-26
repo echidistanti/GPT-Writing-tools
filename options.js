@@ -16,22 +16,23 @@ function initializeI18n() {
 }
 
 // Funzione per impostare i prompt predefiniti
+// Funzione per impostare i prompt predefiniti
 function getDefaultPrompts() {
   return [
-    { 
-      id: 1, 
-      name: getMessage('newPromptName'), 
-      prompt: getMessage('newPromptText')
-    },
     {
-      id: 2,
-      name: "Traduci in inglese",
+      id: 1,
+      name: "🌎 Translate to English",
       prompt: "Translate the following text to English while maintaining its original meaning and tone:"
     },
     {
-      id: 3,
-      name: "Correggi errori",
+      id: 2,
+      name: "✍️ Fix Grammar",
       prompt: "Check the following text for grammatical and spelling errors, then provide the corrected version:"
+    },
+    {
+      id: 3,
+      name: "📝 Rewrite",
+      prompt: "Rewrite the following text to be more concise and well-written while preserving the original meaning. Provide only the rewritten text as your output, without any quotes or tags. Respond in the same language as the original text:"
     }
   ];
 }
