@@ -1,6 +1,6 @@
 {
     "extName": {
-      "message": "GPT Text Helper"
+      "message": "GPT Writing Tools"
     },
     "extDescription": {
       "message": "Process selected text with GPT models using custom prompts"
