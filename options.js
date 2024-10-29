@@ -15,6 +15,34 @@ function initializeI18n() {
   });
 }
 
+// Function to estimate token count
+function estimateTokens(text) {
+  // GPT uses approximately 4 characters per token
+  return Math.ceil(text.length / 4);
+}
+
+// Show token counter
+function showTokenCounter(text) {
+  let tokenCounter = document.querySelector('.token-counter');
+  if (!tokenCounter) {
+    tokenCounter = document.createElement('div');
+    tokenCounter.className = 'token-counter';
+    document.body.appendChild(tokenCounter);
+  }
+
+  const tokens = estimateTokens(text);
+  const maxTokens = 4000; // Standard limit for many GPT models
+
+  tokenCounter.className = 'token-counter';
+  if (tokens > maxTokens) {
+    tokenCounter.classList.add('error');
+  } else if (tokens > maxTokens * 0.8) {
+    tokenCounter.classList.add('warning');
+  }
+
+  tokenCounter.textContent = `Tokens: ${tokens}/${maxTokens}`;
+}
+
 // Default prompts setup
 function getDefaultPrompts() {
   return [
@@ -34,6 +62,45 @@ function getDefaultPrompts() {
       prompt: "Rewrite the following text to be more concise and well-written while preserving the original meaning. Provide only the rewritten text as your output, without any quotes or tags. Respond in the same language as the original text:"
     }
   ];
+}
+
+// Show API key status
+function showApiKeyStatus(isValid, errorMessage = '') {
+  const apiKeyInput = document.getElementById('apiKey');
+  let statusElement = document.querySelector('.api-key-status');
+  
+  if (!statusElement) {
+    statusElement = document.createElement('span');
+    statusElement.className = 'api-key-status';
+    apiKeyInput.parentNode.appendChild(statusElement);
+  }
+
+  if (isValid) {
+    statusElement.className = 'api-key-status valid';
+    statusElement.textContent = '✓ Valid API key';
+  } else {
+    statusElement.className = 'api-key-status invalid';
+    statusElement.textContent = '✗ Invalid API key' + (errorMessage ? `: ${errorMessage}` : '');
+  }
+}
+
+// Add API key tooltip
+function addApiKeyTooltip() {
+  const apiKeyLabel = document.querySelector('label[for="apiKey"]');
+  const tooltip = document.createElement('span');
+  tooltip.className = 'info-tooltip';
+  tooltip.innerHTML = `
+    <span class="icon">ⓘ</span>
+    <span class="tooltip-text">
+      To get your OpenAI API key:
+      1. Go to platform.openai.com
+      2. Sign in or create an account
+      3. Go to the API section
+      4. Create a new API key
+      Note: Keep your API key secure and never share it.
+    </span>
+  `;
+  apiKeyLabel.appendChild(tooltip);
 }
 
 // Load saved settings
@@ -81,7 +148,16 @@ async function loadSettings() {
 
 // Load available models
 async function loadModels(apiKey) {
+  const modelSelect = document.getElementById('model');
+  const loadingSpinner = document.createElement('div');
+  loadingSpinner.className = 'loading-spinner';
+  
   try {
+    // Show loading spinner
+    modelSelect.parentNode.appendChild(loadingSpinner);
+    modelSelect.disabled = true;
+    modelSelect.innerHTML = '<option>Loading models...</option>';
+
     const response = await fetch('https://api.openai.com/v1/models', {
       headers: {
         'Authorization': `Bearer ${apiKey}`
@@ -89,19 +165,12 @@ async function loadModels(apiKey) {
     });
     
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      throw new Error(response.statusText);
     }
     
     const data = await response.json();
     
-    const modelSelect = document.getElementById('model');
-    modelSelect.innerHTML = '';
-    
-    // Add empty option first
-    const defaultOption = document.createElement('option');
-    defaultOption.value = '';
-    defaultOption.textContent = 'Select a model...';
-    modelSelect.appendChild(defaultOption);
+    modelSelect.innerHTML = '<option value="">Select a model...</option>';
     
     // Filter and sort models
     data.data
@@ -119,9 +188,16 @@ async function loadModels(apiKey) {
     if (result.selectedModel) {
       modelSelect.value = result.selectedModel;
     }
+
+    // Update API key status
+    showApiKeyStatus(true);
   } catch (error) {
     console.error('Error loading models:', error);
-    alert(getMessage('errorLoadingModels'));
+    modelSelect.innerHTML = '<option value="">Error loading models</option>';
+    showApiKeyStatus(false, error.message);
+  } finally {
+    modelSelect.disabled = false;
+    loadingSpinner.remove();
   }
 }
 
@@ -177,6 +253,7 @@ function updatePromptsTable() {
       const id = parseInt(this.dataset.id);
       const field = this.dataset.field;
       updatePrompt(id, field, this.value);
+      showTokenCounter(this.value);
     });
   });
 
@@ -264,26 +341,25 @@ function showSaveStatus() {
 
 // Save API and model settings
 async function saveSettings() {
+  const apiKey = document.getElementById('apiKey').value;
+  const modelSelect = document.getElementById('model');
+  
   try {
-    const apiKey = document.getElementById('apiKey').value;
-    const modelSelect = document.getElementById('model');
-    const selectedModel = modelSelect.value;
-    
-    // Save both API key and model
-    await chrome.storage.local.set({
-      apiKey: apiKey,
-      selectedModel: selectedModel
-    });
-    
-    // If there's an API key, try to load models
+    // Try to load models to validate API key
     if (apiKey) {
       await loadModels(apiKey);
     }
+
+    // If we get here, API key is valid or empty
+    await chrome.storage.local.set({
+      apiKey: apiKey,
+      selectedModel: modelSelect.value
+    });
     
     showSaveStatus();
   } catch (error) {
     console.error('Error saving settings:', error);
-    alert(getMessage('errorSavingSettings'));
+    showApiKeyStatus(false, error.message);
   }
 }
 
@@ -311,6 +387,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (savePromptsButton) {
     savePromptsButton.addEventListener('click', savePrompts);
+  }
+
+  // Add API key tooltip
+  addApiKeyTooltip();
+
+  // Initialize API key status if key exists
+  const apiKey = apiKeyInput?.value;
+  if (apiKey) {
+    loadModels(apiKey).catch(console.error);
   }
 });
 
