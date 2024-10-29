@@ -1,6 +1,7 @@
 let prompts = [];
 let originalPrompts = [];
 let hasUnsavedChanges = false;
+let dragSource = null;
 
 // Utility function for localized strings
 function getMessage(key) {
@@ -17,7 +18,6 @@ function initializeI18n() {
 
 // Function to estimate token count
 function estimateTokens(text) {
-  // GPT uses approximately 4 characters per token
   return Math.ceil(text.length / 4);
 }
 
@@ -31,7 +31,7 @@ function showTokenCounter(text) {
   }
 
   const tokens = estimateTokens(text);
-  const maxTokens = 4000; // Standard limit for many GPT models
+  const maxTokens = 4000;
 
   tokenCounter.className = 'token-counter';
   if (tokens > maxTokens) {
@@ -108,25 +108,20 @@ async function loadSettings() {
   try {
     const result = await chrome.storage.local.get(['apiKey', 'selectedModel', 'prompts']);
     
-    // Set API Key
     const apiKeyInput = document.getElementById('apiKey');
     if (apiKeyInput) {
       apiKeyInput.value = result.apiKey || '';
     }
     
-    // Set prompts
     if (Array.isArray(result.prompts) && result.prompts.length > 0) {
       prompts = result.prompts;
     } else {
       prompts = getDefaultPrompts();
-      // Save default prompts
       await chrome.storage.local.set({ prompts });
     }
     
-    // Create deep copy of original prompts
     originalPrompts = JSON.parse(JSON.stringify(prompts));
     
-    // If there's an API key, load models
     if (result.apiKey) {
       await loadModels(result.apiKey);
       if (result.selectedModel) {
@@ -137,7 +132,6 @@ async function loadSettings() {
       }
     }
     
-    // Update UI
     updatePromptsTable();
     updateSaveButtonState();
   } catch (error) {
@@ -153,7 +147,6 @@ async function loadModels(apiKey) {
   loadingSpinner.className = 'loading-spinner';
   
   try {
-    // Show loading spinner
     modelSelect.parentNode.appendChild(loadingSpinner);
     modelSelect.disabled = true;
     modelSelect.innerHTML = '<option>Loading models...</option>';
@@ -172,7 +165,6 @@ async function loadModels(apiKey) {
     
     modelSelect.innerHTML = '<option value="">Select a model...</option>';
     
-    // Filter and sort models
     data.data
       .filter(model => model.id.startsWith('gpt'))
       .sort((a, b) => a.id.localeCompare(b.id))
@@ -183,13 +175,24 @@ async function loadModels(apiKey) {
         modelSelect.appendChild(option);
       });
 
-    // Restore saved model
+    // Recupera il modello salvato
     const result = await chrome.storage.local.get('selectedModel');
-    if (result.selectedModel) {
+    
+    // Se non c'è un modello salvato o il modello salvato non è più disponibile
+    if (!result.selectedModel || !Array.from(modelSelect.options).some(opt => opt.value === result.selectedModel)) {
+      
+      const defaultModel = Array.from(modelSelect.options)
+        .find(opt => opt.value === 'gpt-4o-mini');
+      
+      if (defaultModel) {
+        modelSelect.value = 'gpt-4o-mini';
+        // Salva il modello predefinito
+        await chrome.storage.local.set({ selectedModel: 'gpt-4o-mini' });
+      }
+    } else {
       modelSelect.value = result.selectedModel;
     }
 
-    // Update API key status
     showApiKeyStatus(true);
   } catch (error) {
     console.error('Error loading models:', error);
@@ -215,8 +218,12 @@ function updatePromptsTable() {
   
   tbody.innerHTML = '';
   
-  prompts.forEach(prompt => {
+  prompts.forEach((prompt, index) => {
     const tr = document.createElement('tr');
+    tr.className = 'prompt-row';
+    tr.draggable = true;
+    tr.dataset.id = prompt.id;
+    
     const originalPrompt = originalPrompts.find(p => p.id === prompt.id);
     const isModified = originalPrompt && 
       (originalPrompt.name !== prompt.name || originalPrompt.prompt !== prompt.prompt);
@@ -226,7 +233,9 @@ function updatePromptsTable() {
     }
     
     tr.innerHTML = `
-      <td>
+      <td style="display: flex; align-items: center;">
+        <span class="drag-handle"></span>
+        <span class="prompt-order">${index + 1}</span>
         <input type="text" value="${escapeHtml(prompt.name)}" 
                data-id="${prompt.id}" 
                data-field="name" 
@@ -245,9 +254,16 @@ function updatePromptsTable() {
       </td>
     `;
     tbody.appendChild(tr);
+
+    // Add drag and drop listeners
+    tr.addEventListener('dragstart', handleDragStart);
+    tr.addEventListener('dragend', handleDragEnd);
+    tr.addEventListener('dragover', handleDragOver);
+    tr.addEventListener('drop', handleDrop);
+    tr.addEventListener('dragenter', handleDragEnter);
+    tr.addEventListener('dragleave', handleDragLeave);
   });
 
-  // Add input event listeners
   document.querySelectorAll('.prompt-input').forEach(input => {
     input.addEventListener('input', function() {
       const id = parseInt(this.dataset.id);
@@ -257,13 +273,68 @@ function updatePromptsTable() {
     });
   });
 
-  // Add delete button listeners
   document.querySelectorAll('.button.delete').forEach(button => {
     button.addEventListener('click', function() {
       const id = parseInt(this.dataset.id);
       deletePrompt(id);
     });
   });
+}
+
+// Drag and drop handlers
+function handleDragStart(e) {
+  dragSource = this;
+  this.classList.add('dragging');
+  
+  if (e.target.tagName.toLowerCase() === 'input') {
+    e.preventDefault();
+    return;
+  }
+  
+  e.dataTransfer.effectAllowed = 'move';
+}
+
+function handleDragEnd(e) {
+  this.classList.remove('dragging');
+  document.querySelectorAll('.prompt-row').forEach(row => {
+    row.classList.remove('drop-target');
+  });
+}
+
+function handleDragOver(e) {
+  if (e.preventDefault) {
+    e.preventDefault();
+  }
+  e.dataTransfer.dropEffect = 'move';
+  return false;
+}
+
+function handleDrop(e) {
+  e.stopPropagation();
+  e.preventDefault();
+  
+  if (dragSource !== this) {
+    const allRows = Array.from(document.querySelectorAll('.prompt-row'));
+    const sourceIndex = allRows.indexOf(dragSource);
+    const targetIndex = allRows.indexOf(this);
+    
+    const [removed] = prompts.splice(sourceIndex, 1);
+    prompts.splice(targetIndex, 0, removed);
+    
+    hasUnsavedChanges = true;
+    updatePromptsTable();
+    updateSaveButtonState();
+  }
+  
+  return false;
+}
+
+function handleDragEnter(e) {
+  this.classList.add('drop-target');
+}
+
+function handleDragLeave(e) {
+  this.classList.remove('drop-target');
 }
 
 // Update a prompt
@@ -345,12 +416,10 @@ async function saveSettings() {
   const modelSelect = document.getElementById('model');
   
   try {
-    // Try to load models to validate API key
     if (apiKey) {
       await loadModels(apiKey);
     }
 
-    // If we get here, API key is valid or empty
     await chrome.storage.local.set({
       apiKey: apiKey,
       selectedModel: modelSelect.value
@@ -365,7 +434,6 @@ async function saveSettings() {
 
 // Event Listeners
 document.addEventListener('DOMContentLoaded', () => {
-  // Connect to service worker to keep it alive
   chrome.runtime.connect({ name: 'keepAlive' });
 
   const apiKeyInput = document.getElementById('apiKey');
@@ -389,10 +457,8 @@ document.addEventListener('DOMContentLoaded', () => {
     savePromptsButton.addEventListener('click', savePrompts);
   }
 
-  // Add API key tooltip
   addApiKeyTooltip();
 
-  // Initialize API key status if key exists
   const apiKey = apiKeyInput?.value;
   if (apiKey) {
     loadModels(apiKey).catch(console.error);
