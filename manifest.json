@@ -1,5 +1,5 @@
 {
-  "manifest_version": 2,
+  "manifest_version": 3,
   "name": "__MSG_extName__",
   "description": "__MSG_extDescription__",
   "version": "1.0",
@@ -8,6 +8,9 @@
     "contextMenus",
     "storage",
     "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
     "https://api.openai.com/*"
   ],
   "background": {
@@ -15,24 +18,19 @@
   },
   "options_ui": {
     "page": "options.html",
-    "browser_style": true
+    "open_in_tab": true
   },
-  "browser_action": {
+  "action": {
     "default_icon": {
       "48": "icons/icon-48.png",
       "96": "icons/icon-96.png"
     },
     "default_title": "__MSG_extName__"
   },
-  "web_accessible_resources": [
-    "styles/result.css"
-  ],
-  "browser_specific_settings": {
-    "gecko": {
-      "id": "gpt-text-helper@yourdomain.com",
-      "strict_min_version": "57.0"
-    }
-  },
+  "web_accessible_resources": [{
+    "resources": ["styles/result.css"],
+    "matches": ["<all_urls>"]
+  }],
   "icons": {
     "48": "icons/icon-48.png",
     "96": "icons/icon-96.png",
