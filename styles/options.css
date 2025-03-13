@@ -1,0 +1,328 @@
+/* Base styles */
+:root {
+  --background-primary: #ffffff;
+  --background-secondary: #f8f9fa;
+  --border-color: rgba(0, 0, 0, 0.1);
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --accent-color: #4CAF50;
+  --accent-hover: #45a049;
+  --input-background: #ffffff;
+  --error-color: #dc3545;
+  --success-color: #28a745;
+  --form-element-width: 100%;
+  --max-form-width: 400px;
+}
+
+/* Dark mode colors */
+@media (prefers-color-scheme: dark) {
+  :root {
+      --background-primary: #2d2d2d;
+      --background-secondary: #383838;
+      --border-color: rgba(255, 255, 255, 0.1);
+      --text-primary: #e0e0e0;
+      --text-secondary: #a0a0a0;
+      --accent-color: #43a047;
+      --accent-hover: #388e3c;
+      --input-background: #383838;
+  }
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  background-color: var(--background-primary);
+  color: var(--text-primary);
+  line-height: 1.4;
+  margin: 0;
+  padding: 20px;
+}
+
+/* Container */
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* Sections */
+.section {
+  margin-bottom: 30px;
+  padding: 20px;
+  background: var(--background-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+h2 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  color: var(--text-primary);
+  font-size: 1.5em;
+}
+
+/* Form elements */
+.form-group {
+  margin-bottom: 20px;
+  max-width: var(--max-form-width);
+}
+
+label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+input[type="text"],
+input[type="password"],
+select {
+  width: var(--form-element-width);
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--input-background);
+  color: var(--text-primary);
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus,
+select:focus {
+  outline: none;
+  border-color: var(--accent-color);
+}
+
+/* Buttons */
+.button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  background-color: var(--accent-color);
+  color: white;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+.button:hover {
+  background-color: var(--accent-hover);
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.button-group {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+/* Table styles */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+}
+
+.table th,
+.table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.table th {
+  font-weight: 600;
+  color: var(--text-primary);
+  background-color: var(--background-secondary);
+}
+
+.table tr:hover {
+  background-color: var(--background-secondary);
+}
+
+/* Loading spinner */
+.loading-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--background-secondary);
+  border-top: 2px solid var(--accent-color);
+  border-radius: 50%;
+  margin-left: 10px;
+  animation: spin 1s linear infinite;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Info tooltip */
+.info-tooltip {
+  position: relative;
+  display: inline-block;
+  margin-left: 8px;
+  cursor: help;
+}
+
+.info-tooltip .icon {
+  color: var(--text-secondary);
+  font-size: 16px;
+}
+
+.info-tooltip .tooltip-text {
+  visibility: hidden;
+  position: absolute;
+  z-index: 1;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 300px;
+  background-color: var(--background-primary);
+  color: var(--text-primary);
+  text-align: center;
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  font-size: 12px;
+  white-space: normal;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.info-tooltip:hover .tooltip-text {
+  visibility: visible;
+}
+
+/* Token counter */
+.token-counter {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background-color: var(--background-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 12px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  z-index: 1000;
+}
+
+.token-counter.warning {
+  background-color: #fff3cd;
+  border-color: #ffeeba;
+  color: #856404;
+}
+
+.token-counter.error {
+  background-color: #f8d7da;
+  border-color: #f5c6cb;
+  color: #721c24;
+}
+
+/* API key section */
+.api-key-section {
+  position: relative;
+}
+
+.api-key-status {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 14px;
+}
+
+.api-key-status.valid {
+  color: var(--success-color);
+}
+
+.api-key-status.invalid {
+  color: var(--error-color);
+}
+
+/* Drag and drop styles */
+.prompt-row {
+  cursor: grab;
+  position: relative;
+}
+
+.prompt-row:active {
+  cursor: grabbing;
+}
+
+.prompt-row.dragging {
+  opacity: 0.5;
+  background: var(--background-secondary);
+}
+
+.prompt-row .drag-handle {
+  cursor: grab;
+  padding: 8px;
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.prompt-row .drag-handle:active {
+  cursor: grabbing;
+}
+
+.prompt-row .drag-handle::before {
+  content: "⋮⋮";
+  font-size: 16px;
+  line-height: 1;
+}
+
+.prompt-row.drop-target {
+  border-top: 2px solid var(--accent-color);
+}
+
+/* Order number */
+.prompt-order {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  line-height: 24px;
+  text-align: center;
+  background-color: var(--background-secondary);
+  border-radius: 50%;
+  margin-right: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* Delete button */
+.delete {
+  background-color: var(--error-color);
+}
+
+.delete:hover {
+  background-color: #c82333;
+}
+
+/* Status messages */
+.save-status {
+  display: none;
+  color: var(--success-color);
+  margin-left: 10px;
+  font-size: 14px;
+}
+.input-group {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.input-group input,
+.input-group select {
+  flex: 1;
+}
+
+.input-group button {
+  white-space: nowrap;
+}
