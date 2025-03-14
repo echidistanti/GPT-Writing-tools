@@ -199,156 +199,7 @@ async function showAlert(tab, message) {
 // Handle extension icon click
 chrome.action.onClicked.addListener(async (tab) => {
   try {
-    await chrome.scripting.insertCSS({
-      target: { tabId: tab.id },
-      files: ['styles/result.css']
-    });
-    
-    await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      func: (params) => {
-        // Clean up existing
-        document.querySelector('.gpt-helper-result')?.remove();
-
-        // Create container
-        const container = document.createElement('div');
-        container.className = 'gpt-helper-result';
-        
-        container.innerHTML = `
-          <div class="gpt-helper-draghandle">
-            <span class="gpt-helper-title">GPT Chat</span>
-            <button class="gpt-helper-close">✖</button>
-          </div>
-          <div class="gpt-helper-content">
-            <div class="gpt-helper-chat active">
-              <div class="gpt-helper-chat-input">
-                <textarea class="gpt-helper-textarea" placeholder="${params.i18n.chatPlaceholder}"></textarea>
-                <button class="gpt-helper-button send">${params.i18n.sendButton}</button>
-              </div>
-            </div>
-          </div>
-        `;
-
-        // Setup drag functionality
-        let isDragging = false;
-        let currentX = 0, currentY = 0, initialX = 0, initialY = 0;
-        let xOffset = 0, yOffset = 0;
-
-        const dragHandle = container.querySelector('.gpt-helper-draghandle');
-        
-        dragHandle.addEventListener('mousedown', e => {
-          if (e.target === dragHandle || (dragHandle.contains(e.target) && e.target.tagName !== 'BUTTON')) {
-            isDragging = true;
-            initialX = e.clientX - xOffset;
-            initialY = e.clientY - yOffset;
-          }
-        });
-
-        document.addEventListener('mousemove', e => {
-          if (isDragging) {
-            e.preventDefault();
-            currentX = e.clientX - initialX;
-            currentY = e.clientY - initialY;
-
-            xOffset = currentX;
-            yOffset = currentY;
-            container.style.transform = `translate(${currentX}px, ${currentY}px)`;
-          }
-        });
-
-        document.addEventListener('mouseup', () => {
-          isDragging = false;
-        });
-
-        // Setup close button
-        container.querySelector('.gpt-helper-close').addEventListener('click', () => {
-          container.remove();
-        });
-
-        // Setup send button
-        container.querySelector('.gpt-helper-button.send').addEventListener('click', async () => {
-          const textarea = container.querySelector('.gpt-helper-textarea');
-          const userMessage = textarea.value.trim();
-          
-          if (!userMessage) return;
-
-          // Create a new message section
-          const messageSection = document.createElement('div');
-          messageSection.className = 'gpt-helper-section';
-          messageSection.innerHTML = `
-            <h4>You:</h4>
-            <div class="gpt-helper-text">${userMessage}</div>
-          `;
-          
-          // Add loading indicator
-          const loadingSection = document.createElement('div');
-          loadingSection.className = 'gpt-helper-section';
-          loadingSection.innerHTML = `
-            <div class="gpt-helper-loading">
-              <div class="gpt-helper-spinner"></div>
-              <div class="gpt-helper-loading-text">${params.i18n.loadingText}</div>
-            </div>
-          `;
-
-          // Insert messages before the chat input
-          const chatSection = container.querySelector('.gpt-helper-chat');
-          chatSection.insertBefore(messageSection, container.querySelector('.gpt-helper-chat-input'));
-          chatSection.insertBefore(loadingSection, container.querySelector('.gpt-helper-chat-input'));
-
-          // Clear textarea
-          textarea.value = '';
-
-          try {
-            // Send message to background script
-            const response = await chrome.runtime.sendMessage({
-              action: 'chat',
-              message: userMessage,
-              context: {
-                originalText: '',
-                resultText: ''
-              }
-            });
-
-            // Remove loading indicator
-            loadingSection.remove();
-
-            // Add AI response
-            const responseSection = document.createElement('div');
-            responseSection.className = 'gpt-helper-section';
-            responseSection.innerHTML = `
-              <h4>Assistant:</h4>
-              <div class="gpt-helper-text">${response.message}</div>
-            `;
-            chatSection.insertBefore(responseSection, container.querySelector('.gpt-helper-chat-input'));
-          } catch (error) {
-            // Remove loading indicator
-            loadingSection.remove();
-
-            // Show error message
-            const errorSection = document.createElement('div');
-            errorSection.className = 'gpt-helper-section';
-            errorSection.innerHTML = `
-              <div class="gpt-helper-text" style="color: #dc3545 !important;">
-                Error: ${error.message || 'Failed to process message'}
-              </div>
-            `;
-            chatSection.insertBefore(errorSection, container.querySelector('.gpt-helper-chat-input'));
-          }
-        });
-
-        document.body.appendChild(container);
-
-        // Focus the textarea
-        container.querySelector('.gpt-helper-textarea').focus();
-      },
-      args: [{
-        i18n: {
-          chatPlaceholder: chrome.i18n.getMessage('chatPlaceholder'),
-          sendButton: chrome.i18n.getMessage('sendButton'),
-          loadingText: chrome.i18n.getMessage('loadingText')
-        }
-      }]
-    });
+    await showChatWindow(tab);
   } catch (error) {
     console.error('Error showing chat window:', error);
     showAlert(tab, `Error showing chat window: ${error.message}`);
@@ -357,260 +208,13 @@ chrome.action.onClicked.addListener(async (tab) => {
 
 // Show loading window
 async function showLoadingWindow(tab) {
-  try {
-    await chrome.scripting.insertCSS({
-      target: { tabId: tab.id },
-      files: ['styles/result.css']
-    });
-    
-    await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      func: (i18n) => {
-        // Clean up existing
-        document.querySelector('.gpt-helper-result')?.remove();
-
-        // Create loading window
-        const container = document.createElement('div');
-        container.className = 'gpt-helper-result';
-        
-        container.innerHTML = `
-          <div class="gpt-helper-draghandle">
-            <span class="gpt-helper-title">${i18n.loadingTitle}</span>
-            <button class="gpt-helper-close">✖</button>
-          </div>
-          <div class="gpt-helper-content" style="display: flex; justify-content: center; align-items: center; min-height: 150px;">
-            <div class="gpt-helper-loading">
-              <div class="gpt-helper-spinner"></div>
-              <div class="gpt-helper-loading-text">${i18n.loadingText}</div>
-              <div class="gpt-helper-loading-subtext">${i18n.loadingWait}</div>
-            </div>
-          </div>
-        `;
-
-        // Setup close button
-        container.querySelector('.gpt-helper-close').addEventListener('click', () => {
-          container.remove();
-        });
-
-        document.body.appendChild(container);
-      },
-      args: [{
-        loadingTitle: chrome.i18n.getMessage('loadingTitle'),
-        loadingText: chrome.i18n.getMessage('loadingText'),
-        loadingWait: chrome.i18n.getMessage('loadingWait')
-      }]
-    });
-  } catch (error) {
-    console.error('Error showing loading window:', error);
-  }
+  // The loading state will be handled within the chat window
+  return;
 }
 
 // Show result
 async function showResult(originalText, resultText, tab) {
-  try {
-    await chrome.scripting.insertCSS({
-      target: { tabId: tab.id },
-      files: ['styles/result.css']
-    });
-    
-    await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      func: (params) => {
-        // Clean up existing
-        document.querySelector('.gpt-helper-result')?.remove();
-
-        // Create container
-        const container = document.createElement('div');
-        container.className = 'gpt-helper-result';
-        
-        container.innerHTML = `
-          <div class="gpt-helper-draghandle">
-            <span class="gpt-helper-title">${params.i18n.resultTitle}</span>
-            <button class="gpt-helper-close">✖</button>
-          </div>
-          <div class="gpt-helper-content">
-            <div class="gpt-helper-section">
-              <h4>${params.i18n.originalTextLabel}</h4>
-              <div class="gpt-helper-text">${params.originalText}</div>
-            </div>
-            <div class="gpt-helper-section">
-              <h4>${params.i18n.resultTextLabel}</h4>
-              <div class="gpt-helper-text">${params.resultText}</div>
-            </div>
-            <div class="gpt-helper-chat">
-              <div class="gpt-helper-chat-input">
-                <textarea class="gpt-helper-textarea" placeholder="${params.i18n.chatPlaceholder}"></textarea>
-                <button class="gpt-helper-button send">${params.i18n.sendButton}</button>
-              </div>
-            </div>
-          </div>
-          <div class="gpt-helper-actions">
-            <button class="gpt-helper-button copy">${params.i18n.copyButton}</button>
-            <button class="gpt-helper-button chat">${params.i18n.chatButton}</button>
-          </div>
-        `;
-
-        // Setup drag functionality
-        let isDragging = false;
-        let currentX = 0, currentY = 0, initialX = 0, initialY = 0;
-        let xOffset = 0, yOffset = 0;
-
-        const dragHandle = container.querySelector('.gpt-helper-draghandle');
-        
-        dragHandle.addEventListener('mousedown', e => {
-          if (e.target === dragHandle || (dragHandle.contains(e.target) && e.target.tagName !== 'BUTTON')) {
-            isDragging = true;
-            initialX = e.clientX - xOffset;
-            initialY = e.clientY - yOffset;
-          }
-        });
-
-        document.addEventListener('mousemove', e => {
-          if (isDragging) {
-            e.preventDefault();
-            currentX = e.clientX - initialX;
-            currentY = e.clientY - initialY;
-
-            xOffset = currentX;
-            yOffset = currentY;
-            container.style.transform = `translate(${currentX}px, ${currentY}px)`;
-          }
-        });
-
-        document.addEventListener('mouseup', () => {
-          isDragging = false;
-        });
-
-        // Setup close button
-        container.querySelector('.gpt-helper-close').addEventListener('click', () => {
-          container.remove();
-        });
-
-        // Setup copy button
-        container.querySelector('.gpt-helper-button.copy').addEventListener('click', (e) => {
-          // Get all text elements, including chat responses
-          const allResults = container.querySelectorAll('.gpt-helper-text');
-          // Get the last result (either the initial result or the last chat response)
-          const lastResult = allResults[allResults.length - 1];
-          
-          if (lastResult) {
-            navigator.clipboard.writeText(
-              new DOMParser().parseFromString(lastResult.innerHTML, 'text/html').documentElement.textContent
-            )
-              .then(() => {
-                e.target.textContent = params.i18n.copiedStatus;
-                e.target.classList.add('copied');
-                // Chiudi la finestra dopo un breve delay
-                setTimeout(() => {
-                  container.remove();
-                }, 500);
-              })
-              .catch(err => {
-                console.error('Copy failed:', err);
-                alert(params.i18n.errorCopying);
-              });
-          }
-        });
-
-        // Setup chat button
-        container.querySelector('.gpt-helper-button.chat').addEventListener('click', () => {
-          const chatSection = container.querySelector('.gpt-helper-chat');
-          chatSection.classList.toggle('active');
-        });
-
-        // Setup send button
-        container.querySelector('.gpt-helper-button.send').addEventListener('click', async () => {
-          const textarea = container.querySelector('.gpt-helper-textarea');
-          const userMessage = textarea.value.trim();
-          
-          if (!userMessage) return;
-
-          // Create a new message section
-          const messageSection = document.createElement('div');
-          messageSection.className = 'gpt-helper-section';
-          messageSection.innerHTML = `
-            <h4>You:</h4>
-            <div class="gpt-helper-text">${userMessage}</div>
-          `;
-          
-          // Add loading indicator
-          const loadingSection = document.createElement('div');
-          loadingSection.className = 'gpt-helper-section';
-          loadingSection.innerHTML = `
-            <div class="gpt-helper-loading">
-              <div class="gpt-helper-spinner"></div>
-              <div class="gpt-helper-loading-text">${params.i18n.loadingText}</div>
-            </div>
-          `;
-
-          // Insert messages before the chat input
-          const chatSection = container.querySelector('.gpt-helper-chat');
-          chatSection.insertBefore(messageSection, container.querySelector('.gpt-helper-chat-input'));
-          chatSection.insertBefore(loadingSection, container.querySelector('.gpt-helper-chat-input'));
-
-          // Clear textarea
-          textarea.value = '';
-
-          try {
-            // Send message to background script
-            const response = await chrome.runtime.sendMessage({
-              action: 'chat',
-              message: userMessage,
-              context: {
-                originalText: params.originalText,
-                resultText: params.resultText
-              }
-            });
-
-            // Remove loading indicator
-            loadingSection.remove();
-
-            // Add AI response
-            const responseSection = document.createElement('div');
-            responseSection.className = 'gpt-helper-section';
-            responseSection.innerHTML = `
-              <h4>Assistant:</h4>
-              <div class="gpt-helper-text">${response.message}</div>
-            `;
-            chatSection.insertBefore(responseSection, container.querySelector('.gpt-helper-chat-input'));
-          } catch (error) {
-            // Remove loading indicator
-            loadingSection.remove();
-
-            // Show error message
-            const errorSection = document.createElement('div');
-            errorSection.className = 'gpt-helper-section';
-            errorSection.innerHTML = `
-              <div class="gpt-helper-text" style="color: #dc3545 !important;">
-                Error: ${error.message || 'Failed to process message'}
-              </div>
-            `;
-            chatSection.insertBefore(errorSection, container.querySelector('.gpt-helper-chat-input'));
-          }
-        });
-
-        document.body.appendChild(container);
-      },
-      args: [{
-        originalText: originalText.replace(/"/g, '&quot;'),
-        resultText: resultText.replace(/"/g, '&quot;'),
-        i18n: {
-          resultTitle: chrome.i18n.getMessage('resultTitle'),
-          originalTextLabel: chrome.i18n.getMessage('originalTextLabel'),
-          resultTextLabel: chrome.i18n.getMessage('resultTextLabel'),
-          copyButton: chrome.i18n.getMessage('copyButton'),
-          copiedStatus: chrome.i18n.getMessage('copiedStatus'),
-          chatButton: chrome.i18n.getMessage('chatButton'),
-          chatPlaceholder: chrome.i18n.getMessage('chatPlaceholder'),
-          sendButton: chrome.i18n.getMessage('sendButton'),
-          loadingText: chrome.i18n.getMessage('loadingText')
-        }
-      }]
-    });
-  } catch (error) {
-    console.error('UI error:', error);
-    showAlert(tab, `${chrome.i18n.getMessage('errorShowingResult')}: ${error.message}`);
-  }
+  await showChatWindow(tab, originalText, resultText);
 }
 
 // Add message listener for chat
@@ -618,6 +222,38 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'chat') {
     (async () => {
       try {
+        // Get existing conversation from storage
+        const { chatHistory = [] } = await chrome.storage.local.get(['chatHistory']);
+        
+        // Build conversation history
+        const messages = [
+          { 
+            role: 'system', 
+            content: 'You are a helpful assistant. You have access to the original text and its processed result. Help the user with any questions or requests about the text.' 
+          }
+        ];
+
+        // Add context messages if they exist
+        if (request.context.originalText && request.context.resultText) {
+          messages.push({
+            role: 'user',
+            content: `Original text: "${request.context.originalText}"`
+          });
+          messages.push({
+            role: 'assistant',
+            content: request.context.resultText
+          });
+        }
+
+        // Add chat history
+        messages.push(...chatHistory);
+
+        // Add current message
+        messages.push({
+          role: 'user',
+          content: request.message
+        });
+
         const response = await fetch(CONFIG.API_ENDPOINT, {
           method: 'POST',
           headers: {
@@ -626,16 +262,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           },
           body: JSON.stringify({
             model: state.selectedModel,
-            messages: [
-              { 
-                role: 'system', 
-                content: 'You are a helpful assistant. You have access to the original text and its processed result. Help the user with any questions or requests about the text.' 
-              },
-              { 
-                role: 'user', 
-                content: `Original text: "${request.context.originalText}"\n\nProcessed result: "${request.context.resultText}"\n\nUser message: ${request.message}` 
-              }
-            ]
+            messages: messages
           })
         });
 
@@ -645,11 +272,601 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }
 
         const result = await response.json();
-        sendResponse({ message: result.choices[0].message.content });
+        const assistantMessage = result.choices[0].message.content;
+
+        // Update chat history
+        chatHistory.push(
+          { role: 'user', content: request.message },
+          { role: 'assistant', content: assistantMessage }
+        );
+
+        // Keep only last 10 messages to avoid token limits
+        if (chatHistory.length > 20) {
+          chatHistory.splice(0, 2);
+        }
+
+        // Save updated history
+        await chrome.storage.local.set({ chatHistory });
+
+        sendResponse({ message: assistantMessage });
       } catch (error) {
         sendResponse({ error: error.message });
       }
     })();
-    return true; // Will respond asynchronously
+    return true;
   }
 });
+
+// Unified chat window implementation
+async function showChatWindow(tab, initialMessage = '', initialResponse = '') {
+  try {
+    await chrome.scripting.insertCSS({
+      target: { tabId: tab.id },
+      files: ['styles/result.css']
+    });
+
+    const { overlayEnabled = true } = await chrome.storage.local.get(['overlayEnabled']);
+
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: (params) => {
+        // Ensure styles are scoped to our container
+        const style = document.createElement('style');
+        style.textContent = `
+          .gpt-helper-result, .gpt-helper-result * {
+            all: initial;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+          }
+          
+          .gpt-helper-result {
+            --gpt-primary-color: #007AFF;
+            --gpt-bg-color: #ffffff;
+            --gpt-text-color: #1a1a1a;
+            --gpt-border-color: rgba(0, 0, 0, 0.1);
+            --gpt-bubble-bg: #f0f0f0;
+            --gpt-bubble-text: #1a1a1a;
+            --gpt-user-bubble-bg: var(--gpt-primary-color);
+            --gpt-user-bubble-text: #ffffff;
+          }
+
+          .gpt-helper-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 2147483646;
+          }
+
+          .gpt-helper-overlay.active {
+            opacity: 1;
+          }
+
+          .gpt-helper-message {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+          }
+
+          .gpt-helper-bubble {
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: 14px;
+            line-height: 1.5;
+            word-break: break-word;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            max-width: 100%;
+          }
+
+          .gpt-helper-message.user {
+            align-self: flex-end;
+          }
+
+          .gpt-helper-message.user .gpt-helper-bubble {
+            background-color: var(--gpt-user-bubble-bg);
+            color: var(--gpt-user-bubble-text);
+            border-radius: 18px 18px 4px 18px;
+          }
+
+          .gpt-helper-message.assistant .gpt-helper-bubble {
+            background-color: var(--gpt-bubble-bg);
+            color: var(--gpt-bubble-text);
+            border-radius: 18px 18px 18px 4px;
+          }
+
+          .gpt-helper-timestamp {
+            font-size: 11px;
+            color: #999;
+            padding: 0 4px;
+          }
+
+          .gpt-helper-message.user .gpt-helper-timestamp {
+            align-self: flex-end;
+          }
+
+          .gpt-helper-message.assistant .gpt-helper-timestamp {
+            align-self: flex-start;
+          }
+
+          @keyframes dotPulse {
+            0%, 100% { transform: scale(1); opacity: 0.4; }
+            50% { transform: scale(1.2); opacity: 1; }
+          }
+
+          .gpt-helper-typing .dot {
+            width: 6px;
+            height: 6px;
+            background-color: #666;
+            border-radius: 50%;
+            display: inline-block;
+            margin: 0 1px;
+          }
+        `;
+        document.head.appendChild(style);
+
+        // Get existing window if any
+        let container = document.querySelector('.gpt-helper-result');
+        
+        // If window exists, just focus it and optionally add new messages
+        if (container) {
+          container.style.display = 'flex';
+          if (params.initialMessage) {
+            const messagesContainer = container.querySelector('.gpt-helper-messages');
+            // Add new messages to existing chat
+            addMessage(params.initialMessage, true);
+            if (params.initialResponse) {
+              addMessage(params.initialResponse, false);
+            }
+            // Scroll to bottom
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+          }
+          return;
+        }
+
+        // Clean up any overlay
+        document.querySelectorAll('.gpt-helper-overlay').forEach(el => el.remove());
+
+        // Create overlay if enabled
+        let overlay = null;
+        if (params.overlayEnabled) {
+          overlay = document.createElement('div');
+          overlay.className = 'gpt-helper-overlay';
+          document.body.appendChild(overlay);
+          overlay.offsetHeight; // Force reflow
+          overlay.classList.add('active');
+        }
+
+        // Create main container
+        container = document.createElement('div');
+        container.className = 'gpt-helper-result';
+
+        // Calculate initial position to ensure window is fully visible
+        const windowWidth = 400;
+        const windowHeight = 600;
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        
+        // Calculate position that ensures the window is fully visible
+        const left = Math.max(windowWidth/2, Math.min(viewportWidth - windowWidth/2, viewportWidth/2));
+        const top = Math.max(windowHeight/2, Math.min(viewportHeight - windowHeight/2, viewportHeight/2));
+
+        Object.assign(container.style, {
+          position: 'fixed',
+          top: '0',
+          left: '0',
+          transform: `translate(${left}px, ${top}px)`,
+          zIndex: '2147483647',
+          width: `${windowWidth}px`,
+          maxWidth: '90vw',
+          height: `${windowHeight}px`,
+          maxHeight: '90vh',
+          display: 'flex',
+          flexDirection: 'column',
+          backgroundColor: 'var(--gpt-bg-color)',
+          borderRadius: '16px',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
+          overflow: 'hidden'
+        });
+
+        // Create header
+        const header = document.createElement('div');
+        header.className = 'gpt-helper-draghandle';
+        Object.assign(header.style, {
+          padding: '16px',
+          borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          backgroundColor: '#ffffff',
+          cursor: 'move',
+          userSelect: 'none',
+          WebkitUserSelect: 'none'
+        });
+
+        const title = document.createElement('span');
+        title.className = 'gpt-helper-title';
+        title.textContent = 'GPT Chat';
+        Object.assign(title.style, {
+          fontWeight: '600',
+          color: '#1a1a1a',
+          pointerEvents: 'none'
+        });
+
+        const closeButton = document.createElement('button');
+        closeButton.className = 'gpt-helper-close';
+        closeButton.textContent = '✖';
+        Object.assign(closeButton.style, {
+          border: 'none',
+          background: 'none',
+          fontSize: '16px',
+          cursor: 'pointer',
+          padding: '4px',
+          color: '#666'
+        });
+
+        header.appendChild(title);
+        header.appendChild(closeButton);
+
+        // Create messages container
+        const messagesContainer = document.createElement('div');
+        messagesContainer.className = 'gpt-helper-messages';
+        Object.assign(messagesContainer.style, {
+          flex: '1',
+          overflowY: 'auto',
+          padding: '20px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '16px',
+          backgroundColor: '#ffffff'
+        });
+
+        // Function to add a message
+        function addMessage(content, isUser = false) {
+          const messageDiv = document.createElement('div');
+          messageDiv.className = `gpt-helper-message ${isUser ? 'user' : 'assistant'}`;
+          Object.assign(messageDiv.style, {
+            maxWidth: '85%',
+            alignSelf: isUser ? 'flex-end' : 'flex-start',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '4px'
+          });
+
+          const bubble = document.createElement('div');
+          bubble.className = 'gpt-helper-bubble';
+          bubble.innerHTML = content;
+          Object.assign(bubble.style, {
+            padding: '12px 16px',
+            borderRadius: isUser ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+            backgroundColor: isUser ? '#007AFF' : '#f0f0f0',
+            color: isUser ? '#fff' : '#1a1a1a',
+            fontSize: '14px',
+            lineHeight: '1.5',
+            wordBreak: 'break-word',
+            boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
+            position: 'relative'
+          });
+
+          // Add time stamp
+          const timestamp = document.createElement('div');
+          timestamp.className = 'gpt-helper-timestamp';
+          timestamp.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          Object.assign(timestamp.style, {
+            fontSize: '11px',
+            color: '#999',
+            marginLeft: isUser ? 'auto' : '4px',
+            marginRight: isUser ? '4px' : 'auto'
+          });
+
+          messageDiv.appendChild(bubble);
+          messageDiv.appendChild(timestamp);
+          messagesContainer.appendChild(messageDiv);
+          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+          return messageDiv;
+        }
+
+        // Add initial messages if provided
+        if (params.initialMessage) {
+          addMessage(params.initialMessage, true);
+          if (params.initialResponse) {
+            addMessage(params.initialResponse, false);
+          }
+        }
+
+        // Create input container
+        const inputContainer = document.createElement('div');
+        inputContainer.className = 'gpt-helper-input-container';
+        Object.assign(inputContainer.style, {
+          padding: '16px',
+          borderTop: '1px solid rgba(0, 0, 0, 0.1)',
+          display: 'flex',
+          gap: '12px',
+          backgroundColor: '#ffffff'
+        });
+
+        const textarea = document.createElement('textarea');
+        textarea.className = 'gpt-helper-textarea';
+        textarea.placeholder = params.i18n.chatPlaceholder;
+        textarea.rows = 1;
+        Object.assign(textarea.style, {
+          flex: '1',
+          border: '1px solid rgba(0, 0, 0, 0.1)',
+          borderRadius: '24px',
+          padding: '12px 16px',
+          resize: 'none',
+          fontSize: '14px',
+          lineHeight: '1.5',
+          fontFamily: 'inherit',
+          backgroundColor: '#f8f9fa',
+          outline: 'none',
+          transition: 'border-color 0.2s ease'
+        });
+
+        // Add hover and focus styles for textarea
+        textarea.addEventListener('mouseover', () => {
+          textarea.style.borderColor = 'rgba(0, 0, 0, 0.2)';
+        });
+
+        textarea.addEventListener('mouseout', () => {
+          if (document.activeElement !== textarea) {
+            textarea.style.borderColor = 'rgba(0, 0, 0, 0.1)';
+          }
+        });
+
+        textarea.addEventListener('focus', () => {
+          textarea.style.borderColor = '#007AFF';
+        });
+
+        textarea.addEventListener('blur', () => {
+          textarea.style.borderColor = 'rgba(0, 0, 0, 0.1)';
+        });
+
+        const copyButton = document.createElement('button');
+        copyButton.className = 'gpt-helper-button copy';
+        copyButton.innerHTML = '📋';
+        Object.assign(copyButton.style, {
+          border: 'none',
+          background: 'none',
+          fontSize: '20px',
+          cursor: 'pointer',
+          padding: '8px',
+          color: '#666'
+        });
+
+        inputContainer.appendChild(textarea);
+        inputContainer.appendChild(copyButton);
+
+        // Handle message sending
+        async function sendMessage() {
+          const message = textarea.value.trim();
+          if (!message) return;
+
+          addMessage(message, true);
+          textarea.value = '';
+          textarea.style.height = 'auto';
+
+          // Show typing indicator
+          const typingIndicator = document.createElement('div');
+          typingIndicator.className = 'gpt-helper-message assistant typing';
+          Object.assign(typingIndicator.style, {
+            maxWidth: '80%',
+            alignSelf: 'flex-start'
+          });
+
+          const typingBubble = document.createElement('div');
+          typingBubble.className = 'gpt-helper-bubble';
+          typingBubble.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
+          Object.assign(typingBubble.style, {
+            padding: '12px 16px',
+            borderRadius: '18px 18px 18px 4px',
+            backgroundColor: '#f0f0f0',
+            display: 'inline-flex',
+            gap: '4px',
+            alignItems: 'center'
+          });
+
+          // Add dot animation styles
+          const dots = typingBubble.querySelectorAll('.dot');
+          dots.forEach((dot, index) => {
+            Object.assign(dot.style, {
+              width: '6px',
+              height: '6px',
+              backgroundColor: '#666',
+              borderRadius: '50%',
+              animation: `dotPulse 1s infinite ${index * 0.2}s`
+            });
+          });
+
+          // Add animation keyframes
+          const style = document.createElement('style');
+          style.textContent = `
+            @keyframes dotPulse {
+              0%, 100% { transform: scale(1); opacity: 0.4; }
+              50% { transform: scale(1.2); opacity: 1; }
+            }
+          `;
+          document.head.appendChild(style);
+
+          typingIndicator.appendChild(typingBubble);
+          messagesContainer.appendChild(typingIndicator);
+          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+          try {
+            const response = await chrome.runtime.sendMessage({
+              action: 'chat',
+              message: message,
+              context: {
+                originalText: params.initialMessage || '',
+                resultText: params.initialResponse || ''
+              }
+            });
+
+            typingIndicator.remove();
+            addMessage(response.message);
+          } catch (error) {
+            typingIndicator.remove();
+            addMessage('Error: ' + (error.message || 'Failed to process message'), false);
+          }
+        }
+
+        // Setup event handlers
+        closeButton.addEventListener('click', () => {
+          if (overlay) {
+            overlay.classList.remove('active');
+            setTimeout(() => overlay.remove(), 300);
+          }
+          container.remove();
+        });
+
+        textarea.addEventListener('input', function() {
+          this.style.height = 'auto';
+          this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+
+        textarea.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+          }
+        });
+
+        copyButton.addEventListener('click', function() {
+          const messages = document.querySelectorAll('.gpt-helper-message.assistant .gpt-helper-bubble');
+          if (messages.length > 0) {
+            const lastMessage = messages[messages.length - 1].textContent;
+            navigator.clipboard.writeText(lastMessage)
+              .then(() => {
+                this.innerHTML = '✓';
+                setTimeout(() => {
+                  this.innerHTML = '📋';
+                }, 1000);
+              })
+              .catch(err => {
+                console.error('Copy failed:', err);
+                alert(params.i18n.errorCopying);
+              });
+          }
+        });
+
+        // Setup drag functionality
+        let isDragging = false;
+        let currentX = 0, currentY = 0, initialX = 0, initialY = 0;
+        let xOffset = 0, yOffset = 0;
+
+        header.addEventListener('mousedown', (e) => {
+          if (e.target.closest('.gpt-helper-close')) return;
+          
+          isDragging = true;
+          initialX = e.clientX - xOffset;
+          initialY = e.clientY - yOffset;
+          
+          container.classList.add('dragging');
+        });
+
+        document.addEventListener('mousemove', (e) => {
+          if (!isDragging) return;
+
+          e.preventDefault();
+          currentX = e.clientX - initialX;
+          currentY = e.clientY - initialY;
+
+          // Keep window within viewport bounds
+          const rect = container.getBoundingClientRect();
+          const viewportWidth = window.innerWidth;
+          const viewportHeight = window.innerHeight;
+
+          // Calculate bounds to keep window fully visible
+          const maxX = viewportWidth - rect.width;
+          const maxY = viewportHeight - rect.height;
+
+          currentX = Math.max(0, Math.min(currentX, maxX));
+          currentY = Math.max(0, Math.min(currentY, maxY));
+
+          xOffset = currentX;
+          yOffset = currentY;
+          
+          container.style.transform = `translate(${currentX}px, ${currentY}px)`;
+        });
+
+        document.addEventListener('mouseup', () => {
+          if (!isDragging) return;
+          isDragging = false;
+          container.classList.remove('dragging');
+        });
+
+        // Setup resize functionality
+        const resizer = document.createElement('div');
+        resizer.className = 'gpt-helper-resizer';
+        Object.assign(resizer.style, {
+          position: 'absolute',
+          right: '0',
+          bottom: '0',
+          width: '10px',
+          height: '10px',
+          cursor: 'se-resize'
+        });
+
+        let isResizing = false;
+        let originalWidth = 0;
+        let originalHeight = 0;
+        let originalX = 0;
+        let originalY = 0;
+
+        resizer.addEventListener('mousedown', (e) => {
+          isResizing = true;
+          originalWidth = container.offsetWidth;
+          originalHeight = container.offsetHeight;
+          originalX = e.clientX;
+          originalY = e.clientY;
+          
+          container.classList.add('resizing');
+        });
+
+        document.addEventListener('mousemove', (e) => {
+          if (!isResizing) return;
+
+          const width = originalWidth + (e.clientX - originalX);
+          const height = originalHeight + (e.clientY - originalY);
+
+          // Apply size constraints
+          const newWidth = Math.min(Math.max(width, 300), window.innerWidth * 0.9);
+          const newHeight = Math.min(Math.max(height, 400), window.innerHeight * 0.9);
+
+          container.style.width = `${newWidth}px`;
+          container.style.height = `${newHeight}px`;
+        });
+
+        document.addEventListener('mouseup', () => {
+          if (!isResizing) return;
+          isResizing = false;
+          container.classList.remove('resizing');
+        });
+
+        // Assemble and add to page
+        container.appendChild(header);
+        container.appendChild(messagesContainer);
+        container.appendChild(inputContainer);
+        container.appendChild(resizer);
+
+        document.body.appendChild(container);
+        textarea.focus();
+      },
+      args: [{
+        overlayEnabled,
+        initialMessage: initialMessage,
+        initialResponse: initialResponse,
+        i18n: {
+          chatPlaceholder: chrome.i18n.getMessage('chatPlaceholder'),
+          errorCopying: chrome.i18n.getMessage('errorCopying')
+        }
+      }]
+    });
+  } catch (error) {
+    console.error('Error showing chat window:', error);
+    showAlert(tab, `Error showing chat window: ${error.message}`);
+  }
+}
