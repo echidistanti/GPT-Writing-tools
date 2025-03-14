@@ -320,14 +320,14 @@ async function showChatWindow(tab, initialMessage = '', initialResponse = '') {
           }
           
           .gpt-helper-result {
-            --gpt-primary-color: #007AFF;
-            --gpt-bg-color: #ffffff;
-            --gpt-text-color: #1a1a1a;
-            --gpt-border-color: rgba(0, 0, 0, 0.1);
-            --gpt-bubble-bg: #f0f0f0;
-            --gpt-bubble-text: #1a1a1a;
+            --gpt-primary-color: #0A84FF;
+            --gpt-bg-color: #1C1C1E;
+            --gpt-text-color: #FFFFFF;
+            --gpt-border-color: rgba(255, 255, 255, 0.1);
+            --gpt-bubble-bg: #2C2C2E;
+            --gpt-bubble-text: #FFFFFF;
             --gpt-user-bubble-bg: var(--gpt-primary-color);
-            --gpt-user-bubble-text: #ffffff;
+            --gpt-user-bubble-text: #FFFFFF;
           }
 
           .gpt-helper-overlay {
@@ -336,7 +336,7 @@ async function showChatWindow(tab, initialMessage = '', initialResponse = '') {
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(0, 0, 0, 0.7);
             opacity: 0;
             transition: opacity 0.3s ease;
             z-index: 2147483646;
@@ -358,7 +358,7 @@ async function showChatWindow(tab, initialMessage = '', initialResponse = '') {
             font-size: 14px;
             line-height: 1.5;
             word-break: break-word;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
             max-width: 100%;
           }
 
@@ -457,9 +457,9 @@ async function showChatWindow(tab, initialMessage = '', initialResponse = '') {
           height: `${height}px`,
           display: 'flex',
           flexDirection: 'column',
-          backgroundColor: '#ffffff',
+          backgroundColor: 'var(--gpt-bg-color)',
           borderRadius: '12px',
-          boxShadow: '0 4px 24px rgba(0, 0, 0, 0.15)',
+          boxShadow: '0 4px 24px rgba(0, 0, 0, 0.3)',
           overflow: 'hidden',
           zIndex: '2147483647'
         });
@@ -468,8 +468,8 @@ async function showChatWindow(tab, initialMessage = '', initialResponse = '') {
         const header = document.createElement('div');
         Object.assign(header.style, {
           padding: '16px',
-          borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
-          backgroundColor: '#ffffff',
+          borderBottom: '1px solid var(--gpt-border-color)',
+          backgroundColor: 'var(--gpt-bg-color)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center'
@@ -481,7 +481,7 @@ async function showChatWindow(tab, initialMessage = '', initialResponse = '') {
         Object.assign(title.style, {
           fontWeight: '600',
           fontSize: '14px',
-          color: '#1a1a1a'
+          color: 'var(--gpt-text-color)'
         });
 
         // Add close button
@@ -490,7 +490,7 @@ async function showChatWindow(tab, initialMessage = '', initialResponse = '') {
         Object.assign(closeButton.style, {
           border: 'none',
           background: 'none',
-          color: '#666',
+          color: '#999',
           fontSize: '16px',
           cursor: 'pointer',
           padding: '4px 8px'
@@ -517,7 +517,7 @@ async function showChatWindow(tab, initialMessage = '', initialResponse = '') {
           display: 'flex',
           flexDirection: 'column',
           gap: '16px',
-          backgroundColor: '#ffffff'
+          backgroundColor: 'var(--gpt-bg-color)'
         });
 
         // Function to add a message
@@ -538,12 +538,12 @@ async function showChatWindow(tab, initialMessage = '', initialResponse = '') {
           Object.assign(bubble.style, {
             padding: '12px 16px',
             borderRadius: isUser ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-            backgroundColor: isUser ? '#007AFF' : '#f0f0f0',
-            color: isUser ? '#fff' : '#1a1a1a',
+            backgroundColor: isUser ? 'var(--gpt-user-bubble-bg)' : 'var(--gpt-bubble-bg)',
+            color: 'var(--gpt-bubble-text)',
             fontSize: '14px',
             lineHeight: '1.5',
             wordBreak: 'break-word',
-            boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
+            boxShadow: '0 1px 2px rgba(0, 0, 0, 0.2)',
             position: 'relative'
           });
 
@@ -578,10 +578,10 @@ async function showChatWindow(tab, initialMessage = '', initialResponse = '') {
         inputContainer.className = 'gpt-helper-input-container';
         Object.assign(inputContainer.style, {
           padding: '16px',
-          borderTop: '1px solid rgba(0, 0, 0, 0.1)',
+          borderTop: '1px solid var(--gpt-border-color)',
           display: 'flex',
           gap: '12px',
-          backgroundColor: '#ffffff'
+          backgroundColor: 'var(--gpt-bg-color)'
         });
 
         const textarea = document.createElement('textarea');
@@ -590,35 +590,36 @@ async function showChatWindow(tab, initialMessage = '', initialResponse = '') {
         textarea.rows = 1;
         Object.assign(textarea.style, {
           flex: '1',
-          border: '1px solid rgba(0, 0, 0, 0.1)',
+          border: '1px solid var(--gpt-border-color)',
           borderRadius: '24px',
           padding: '12px 16px',
           resize: 'none',
           fontSize: '14px',
           lineHeight: '1.5',
           fontFamily: 'inherit',
-          backgroundColor: '#f8f9fa',
+          backgroundColor: '#2C2C2E',
+          color: 'var(--gpt-text-color)',
           outline: 'none',
           transition: 'border-color 0.2s ease'
         });
 
         // Add hover and focus styles for textarea
         textarea.addEventListener('mouseover', () => {
-          textarea.style.borderColor = 'rgba(0, 0, 0, 0.2)';
+          textarea.style.borderColor = 'rgba(255, 255, 255, 0.2)';
         });
 
         textarea.addEventListener('mouseout', () => {
           if (document.activeElement !== textarea) {
-            textarea.style.borderColor = 'rgba(0, 0, 0, 0.1)';
+            textarea.style.borderColor = 'var(--gpt-border-color)';
           }
         });
 
         textarea.addEventListener('focus', () => {
-          textarea.style.borderColor = '#007AFF';
+          textarea.style.borderColor = 'var(--gpt-primary-color)';
         });
 
         textarea.addEventListener('blur', () => {
-          textarea.style.borderColor = 'rgba(0, 0, 0, 0.1)';
+          textarea.style.borderColor = 'var(--gpt-border-color)';
         });
 
         const copyButton = document.createElement('button');
@@ -630,7 +631,7 @@ async function showChatWindow(tab, initialMessage = '', initialResponse = '') {
           fontSize: '20px',
           cursor: 'pointer',
           padding: '8px',
-          color: '#666'
+          color: '#999'
         });
 
         inputContainer.appendChild(textarea);
@@ -659,7 +660,7 @@ async function showChatWindow(tab, initialMessage = '', initialResponse = '') {
           Object.assign(typingBubble.style, {
             padding: '12px 16px',
             borderRadius: '18px 18px 18px 4px',
-            backgroundColor: '#f0f0f0',
+            backgroundColor: 'var(--gpt-bubble-bg)',
             display: 'inline-flex',
             gap: '4px',
             alignItems: 'center'
@@ -671,7 +672,7 @@ async function showChatWindow(tab, initialMessage = '', initialResponse = '') {
             Object.assign(dot.style, {
               width: '6px',
               height: '6px',
-              backgroundColor: '#666',
+              backgroundColor: 'var(--gpt-bubble-text)',
               borderRadius: '50%',
               animation: `dotPulse 1s infinite ${index * 0.2}s`
             });
