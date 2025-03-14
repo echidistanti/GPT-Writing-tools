@@ -444,72 +444,68 @@ async function showChatWindow(tab, initialMessage = '', initialResponse = '') {
         container = document.createElement('div');
         container.className = 'gpt-helper-result';
 
-        // Calculate initial position to ensure window is fully visible
-        const windowWidth = 400;
-        const windowHeight = 600;
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
-        
-        // Calculate position that ensures the window is fully visible
-        const left = Math.max(windowWidth/2, Math.min(viewportWidth - windowWidth/2, viewportWidth/2));
-        const top = Math.max(windowHeight/2, Math.min(viewportHeight - windowHeight/2, viewportHeight/2));
+        // Fixed dimensions and position
+        const width = 400;
+        const height = 600;
+        const padding = 20;
 
         Object.assign(container.style, {
           position: 'fixed',
-          top: '0',
-          left: '0',
-          transform: `translate(${left}px, ${top}px)`,
-          zIndex: '2147483647',
-          width: `${windowWidth}px`,
-          maxWidth: '90vw',
-          height: `${windowHeight}px`,
-          maxHeight: '90vh',
+          top: `${padding}px`,
+          right: `${padding}px`,
+          width: `${width}px`,
+          height: `${height}px`,
           display: 'flex',
           flexDirection: 'column',
-          backgroundColor: 'var(--gpt-bg-color)',
-          borderRadius: '16px',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
-          overflow: 'hidden'
+          backgroundColor: '#ffffff',
+          borderRadius: '12px',
+          boxShadow: '0 4px 24px rgba(0, 0, 0, 0.15)',
+          overflow: 'hidden',
+          zIndex: '2147483647'
         });
 
         // Create header
         const header = document.createElement('div');
-        header.className = 'gpt-helper-draghandle';
         Object.assign(header.style, {
           padding: '16px',
           borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
+          backgroundColor: '#ffffff',
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'center',
-          backgroundColor: '#ffffff',
-          cursor: 'move',
-          userSelect: 'none',
-          WebkitUserSelect: 'none'
+          alignItems: 'center'
         });
 
-        const title = document.createElement('span');
-        title.className = 'gpt-helper-title';
+        // Add title
+        const title = document.createElement('div');
         title.textContent = 'GPT Chat';
         Object.assign(title.style, {
           fontWeight: '600',
-          color: '#1a1a1a',
-          pointerEvents: 'none'
+          fontSize: '14px',
+          color: '#1a1a1a'
         });
 
+        // Add close button
         const closeButton = document.createElement('button');
-        closeButton.className = 'gpt-helper-close';
-        closeButton.textContent = '✖';
+        closeButton.innerHTML = '✕';
         Object.assign(closeButton.style, {
           border: 'none',
           background: 'none',
+          color: '#666',
           fontSize: '16px',
           cursor: 'pointer',
-          padding: '4px',
-          color: '#666'
+          padding: '4px 8px'
         });
 
         header.appendChild(title);
         header.appendChild(closeButton);
+
+        // Close button handler
+        closeButton.addEventListener('click', () => {
+          if (overlay) {
+            overlay.remove();
+          }
+          container.remove();
+        });
 
         // Create messages container
         const messagesContainer = document.createElement('div');
@@ -714,14 +710,6 @@ async function showChatWindow(tab, initialMessage = '', initialResponse = '') {
         }
 
         // Setup event handlers
-        closeButton.addEventListener('click', () => {
-          if (overlay) {
-            overlay.classList.remove('active');
-            setTimeout(() => overlay.remove(), 300);
-          }
-          container.remove();
-        });
-
         textarea.addEventListener('input', function() {
           this.style.height = 'auto';
           this.style.height = Math.min(this.scrollHeight, 120) + 'px';
@@ -741,9 +729,27 @@ async function showChatWindow(tab, initialMessage = '', initialResponse = '') {
             navigator.clipboard.writeText(lastMessage)
               .then(() => {
                 this.innerHTML = '✓';
+                // Add a success message
+                const successMessage = document.createElement('div');
+                successMessage.style.position = 'absolute';
+                successMessage.style.right = '50px';
+                successMessage.style.bottom = '20px';
+                successMessage.style.backgroundColor = '#4CAF50';
+                successMessage.style.color = 'white';
+                successMessage.style.padding = '8px 16px';
+                successMessage.style.borderRadius = '4px';
+                successMessage.style.fontSize = '14px';
+                successMessage.textContent = 'Copiato!';
+                inputContainer.appendChild(successMessage);
+                
+                // Close window after 500ms
                 setTimeout(() => {
-                  this.innerHTML = '📋';
-                }, 1000);
+                  if (overlay) {
+                    overlay.classList.remove('active');
+                    setTimeout(() => overlay.remove(), 300);
+                  }
+                  container.remove();
+                }, 500);
               })
               .catch(err => {
                 console.error('Copy failed:', err);
@@ -752,106 +758,12 @@ async function showChatWindow(tab, initialMessage = '', initialResponse = '') {
           }
         });
 
-        // Setup drag functionality
-        let isDragging = false;
-        let currentX = 0, currentY = 0, initialX = 0, initialY = 0;
-        let xOffset = 0, yOffset = 0;
-
-        header.addEventListener('mousedown', (e) => {
-          if (e.target.closest('.gpt-helper-close')) return;
-          
-          isDragging = true;
-          initialX = e.clientX - xOffset;
-          initialY = e.clientY - yOffset;
-          
-          container.classList.add('dragging');
-        });
-
-        document.addEventListener('mousemove', (e) => {
-          if (!isDragging) return;
-
-          e.preventDefault();
-          currentX = e.clientX - initialX;
-          currentY = e.clientY - initialY;
-
-          // Keep window within viewport bounds
-          const rect = container.getBoundingClientRect();
-          const viewportWidth = window.innerWidth;
-          const viewportHeight = window.innerHeight;
-
-          // Calculate bounds to keep window fully visible
-          const maxX = viewportWidth - rect.width;
-          const maxY = viewportHeight - rect.height;
-
-          currentX = Math.max(0, Math.min(currentX, maxX));
-          currentY = Math.max(0, Math.min(currentY, maxY));
-
-          xOffset = currentX;
-          yOffset = currentY;
-          
-          container.style.transform = `translate(${currentX}px, ${currentY}px)`;
-        });
-
-        document.addEventListener('mouseup', () => {
-          if (!isDragging) return;
-          isDragging = false;
-          container.classList.remove('dragging');
-        });
-
-        // Setup resize functionality
-        const resizer = document.createElement('div');
-        resizer.className = 'gpt-helper-resizer';
-        Object.assign(resizer.style, {
-          position: 'absolute',
-          right: '0',
-          bottom: '0',
-          width: '10px',
-          height: '10px',
-          cursor: 'se-resize'
-        });
-
-        let isResizing = false;
-        let originalWidth = 0;
-        let originalHeight = 0;
-        let originalX = 0;
-        let originalY = 0;
-
-        resizer.addEventListener('mousedown', (e) => {
-          isResizing = true;
-          originalWidth = container.offsetWidth;
-          originalHeight = container.offsetHeight;
-          originalX = e.clientX;
-          originalY = e.clientY;
-          
-          container.classList.add('resizing');
-        });
-
-        document.addEventListener('mousemove', (e) => {
-          if (!isResizing) return;
-
-          const width = originalWidth + (e.clientX - originalX);
-          const height = originalHeight + (e.clientY - originalY);
-
-          // Apply size constraints
-          const newWidth = Math.min(Math.max(width, 300), window.innerWidth * 0.9);
-          const newHeight = Math.min(Math.max(height, 400), window.innerHeight * 0.9);
-
-          container.style.width = `${newWidth}px`;
-          container.style.height = `${newHeight}px`;
-        });
-
-        document.addEventListener('mouseup', () => {
-          if (!isResizing) return;
-          isResizing = false;
-          container.classList.remove('resizing');
-        });
-
         // Assemble and add to page
         container.appendChild(header);
         container.appendChild(messagesContainer);
         container.appendChild(inputContainer);
-        container.appendChild(resizer);
 
+        // Add container to page
         document.body.appendChild(container);
         textarea.focus();
       },
