@@ -472,7 +472,7 @@ async function showChatWindow(tab, initialMessage = '', initialResponse = '') {
             --gpt-bubble-text: #DCDDDE;
             --gpt-user-bubble-bg: var(--gpt-primary-color);
             --gpt-user-bubble-text: #FFFFFF;
-            --gpt-input-bg: #36393F;
+            --gpt-input-bg: #40444B;
           }
 
           .gpt-helper-overlay {
