@@ -114,7 +114,10 @@ setInterval(() => {
 }, 20000);
 
 // Handle menu clicks
-chrome.contextMenus.onClicked.addListener((info, tab) => {
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+  // Show window immediately
+  await showChatWindow(tab);
+
   if (info.menuItemId === 'prompt-on-the-fly') {
     chrome.scripting.executeScript({
       target: { tabId: tab.id },
@@ -143,8 +146,94 @@ async function processText(text, promptText, tab) {
   if (!validateInput(text, tab)) return;
 
   try {
-    await showLoadingWindow(tab);
+    // Add user message and typing indicator
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: (params) => {
+        const container = document.querySelector('.gpt-helper-result');
+        if (!container) return;
+        
+        const messagesContainer = container.querySelector('.gpt-helper-messages');
+        
+        // Add user message
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'gpt-helper-message user';
+        Object.assign(messageDiv.style, {
+          maxWidth: '85%',
+          alignSelf: 'flex-end',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '4px'
+        });
 
+        const bubble = document.createElement('div');
+        bubble.className = 'gpt-helper-bubble';
+        bubble.textContent = params.text;
+        Object.assign(bubble.style, {
+          padding: '12px 16px',
+          borderRadius: '18px 18px 4px 18px',
+          backgroundColor: 'var(--gpt-user-bubble-bg)',
+          color: 'var(--gpt-user-bubble-text)',
+          fontSize: '14px',
+          lineHeight: '1.5',
+          wordBreak: 'break-word',
+          boxShadow: '0 1px 2px rgba(0, 0, 0, 0.2)',
+          position: 'relative'
+        });
+
+        const timestamp = document.createElement('div');
+        timestamp.className = 'gpt-helper-timestamp';
+        timestamp.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        Object.assign(timestamp.style, {
+          fontSize: '11px',
+          color: '#999',
+          marginLeft: 'auto',
+          marginRight: '4px'
+        });
+
+        messageDiv.appendChild(bubble);
+        messageDiv.appendChild(timestamp);
+        messagesContainer.appendChild(messageDiv);
+
+        // Add typing indicator
+        const typingIndicator = document.createElement('div');
+        typingIndicator.className = 'gpt-helper-message assistant typing';
+        Object.assign(typingIndicator.style, {
+          maxWidth: '80%',
+          alignSelf: 'flex-start'
+        });
+
+        const typingBubble = document.createElement('div');
+        typingBubble.className = 'gpt-helper-bubble';
+        typingBubble.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
+        Object.assign(typingBubble.style, {
+          padding: '12px 16px',
+          borderRadius: '18px 18px 18px 4px',
+          backgroundColor: 'var(--gpt-bubble-bg)',
+          display: 'inline-flex',
+          gap: '4px',
+          alignItems: 'center'
+        });
+
+        const dots = typingBubble.querySelectorAll('.dot');
+        dots.forEach((dot, index) => {
+          Object.assign(dot.style, {
+            width: '6px',
+            height: '6px',
+            backgroundColor: 'var(--gpt-bubble-text)',
+            borderRadius: '50%',
+            animation: `dotPulse 1s infinite ${index * 0.2}s`
+          });
+        });
+
+        typingIndicator.appendChild(typingBubble);
+        messagesContainer.appendChild(typingIndicator);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      },
+      args: [{ text }]
+    });
+
+    // Make API request
     const response = await fetch(CONFIG.API_ENDPOINT, {
       method: 'POST',
       headers: {
@@ -166,7 +255,61 @@ async function processText(text, promptText, tab) {
       throw new Error(result.error?.message || 'API request failed');
     }
 
-    await showResult(text, result.choices[0].message.content, tab);
+    // Show the response
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: (params) => {
+        const container = document.querySelector('.gpt-helper-result');
+        if (!container) return;
+        
+        const messagesContainer = container.querySelector('.gpt-helper-messages');
+        const typingIndicator = messagesContainer.querySelector('.typing');
+        if (typingIndicator) {
+          typingIndicator.remove();
+        }
+
+        // Add assistant message
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'gpt-helper-message assistant';
+        Object.assign(messageDiv.style, {
+          maxWidth: '85%',
+          alignSelf: 'flex-start',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '4px'
+        });
+
+        const bubble = document.createElement('div');
+        bubble.className = 'gpt-helper-bubble';
+        bubble.textContent = params.response;
+        Object.assign(bubble.style, {
+          padding: '12px 16px',
+          borderRadius: '18px 18px 18px 4px',
+          backgroundColor: 'var(--gpt-bubble-bg)',
+          color: 'var(--gpt-bubble-text)',
+          fontSize: '14px',
+          lineHeight: '1.5',
+          wordBreak: 'break-word',
+          boxShadow: '0 1px 2px rgba(0, 0, 0, 0.2)',
+          position: 'relative'
+        });
+
+        const timestamp = document.createElement('div');
+        timestamp.className = 'gpt-helper-timestamp';
+        timestamp.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        Object.assign(timestamp.style, {
+          fontSize: '11px',
+          color: '#999',
+          marginLeft: '4px'
+        });
+
+        messageDiv.appendChild(bubble);
+        messageDiv.appendChild(timestamp);
+        messagesContainer.appendChild(messageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      },
+      args: [{ response: result.choices[0].message.content }]
+    });
   } catch (error) {
     console.error('Processing error:', error);
     showAlert(tab, `${chrome.i18n.getMessage('errorProcessingText')}: ${error.message}`);
@@ -214,7 +357,8 @@ async function showLoadingWindow(tab) {
 
 // Show result
 async function showResult(originalText, resultText, tab) {
-  await showChatWindow(tab, originalText, resultText);
+  // Non fare nulla qui, la risposta è già stata mostrata
+  return;
 }
 
 // Add message listener for chat
@@ -321,13 +465,14 @@ async function showChatWindow(tab, initialMessage = '', initialResponse = '') {
           
           .gpt-helper-result {
             --gpt-primary-color: #0A84FF;
-            --gpt-bg-color: #1C1C1E;
-            --gpt-text-color: #FFFFFF;
-            --gpt-border-color: rgba(255, 255, 255, 0.1);
-            --gpt-bubble-bg: #2C2C2E;
-            --gpt-bubble-text: #FFFFFF;
+            --gpt-bg-color: #2F3136;
+            --gpt-text-color: #DCDDDE;
+            --gpt-border-color: rgba(255, 255, 255, 0.06);
+            --gpt-bubble-bg: #40444B;
+            --gpt-bubble-text: #DCDDDE;
             --gpt-user-bubble-bg: var(--gpt-primary-color);
             --gpt-user-bubble-text: #FFFFFF;
+            --gpt-input-bg: #36393F;
           }
 
           .gpt-helper-overlay {
@@ -336,14 +481,12 @@ async function showChatWindow(tab, initialMessage = '', initialResponse = '') {
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.7);
-            opacity: 0;
-            transition: opacity 0.3s ease;
+            background: rgba(0, 0, 0, 0.4);
             z-index: 2147483646;
           }
 
-          .gpt-helper-overlay.active {
-            opacity: 1;
+          .gpt-helper-container {
+            opacity: 1 !important;
           }
 
           .gpt-helper-message {
@@ -459,9 +602,11 @@ async function showChatWindow(tab, initialMessage = '', initialResponse = '') {
           flexDirection: 'column',
           backgroundColor: 'var(--gpt-bg-color)',
           borderRadius: '12px',
-          boxShadow: '0 4px 24px rgba(0, 0, 0, 0.3)',
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.2)',
           overflow: 'hidden',
-          zIndex: '2147483647'
+          zIndex: '2147483647',
+          opacity: '1',
+          transform: 'none'
         });
 
         // Create header
@@ -597,15 +742,14 @@ async function showChatWindow(tab, initialMessage = '', initialResponse = '') {
           fontSize: '14px',
           lineHeight: '1.5',
           fontFamily: 'inherit',
-          backgroundColor: '#2C2C2E',
+          backgroundColor: 'var(--gpt-input-bg)',
           color: 'var(--gpt-text-color)',
-          outline: 'none',
-          transition: 'border-color 0.2s ease'
+          outline: 'none'
         });
 
         // Add hover and focus styles for textarea
         textarea.addEventListener('mouseover', () => {
-          textarea.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+          textarea.style.borderColor = 'rgba(255, 255, 255, 0.1)';
         });
 
         textarea.addEventListener('mouseout', () => {
