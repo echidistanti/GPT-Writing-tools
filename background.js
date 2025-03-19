@@ -341,12 +341,8 @@ async function showAlert(tab, message) {
 
 // Handle extension icon click
 chrome.action.onClicked.addListener(async (tab) => {
-  try {
-    await showChatWindow(tab);
-  } catch (error) {
-    console.error('Error showing chat window:', error);
-    showAlert(tab, `Error showing chat window: ${error.message}`);
-  }
+  // Open options page instead of chat window
+  chrome.runtime.openOptionsPage();
 });
 
 // Show loading window
@@ -464,15 +460,18 @@ async function showChatWindow(tab, initialMessage = '', initialResponse = '') {
           }
           
           .gpt-helper-result {
-            --gpt-primary-color: #0A84FF;
-            --gpt-bg-color: #2F3136;
-            --gpt-text-color: #DCDDDE;
-            --gpt-border-color: rgba(255, 255, 255, 0.06);
-            --gpt-bubble-bg: #40444B;
-            --gpt-bubble-text: #DCDDDE;
+            --gpt-primary-color: #3B82F6;
+            --gpt-bg-color: #1F1F23;
+            --gpt-text-color: #E5E7EB;
+            --gpt-border-color: rgba(255, 255, 255, 0.1);
+            --gpt-bubble-bg: #2D2D35;
+            --gpt-bubble-text: #E5E7EB;
             --gpt-user-bubble-bg: var(--gpt-primary-color);
             --gpt-user-bubble-text: #FFFFFF;
-            --gpt-input-bg: #40444B;
+            --gpt-input-bg: #2D2D35;
+            --gpt-input-text: #E5E7EB;
+            --gpt-timestamp-color: #6B7280;
+            --gpt-placeholder-color: #9CA3AF;
           }
 
           .gpt-helper-overlay {
@@ -481,7 +480,7 @@ async function showChatWindow(tab, initialMessage = '', initialResponse = '') {
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.4);
+            background: rgba(0, 0, 0, 0.5);
             z-index: 2147483646;
           }
 
@@ -523,7 +522,7 @@ async function showChatWindow(tab, initialMessage = '', initialResponse = '') {
 
           .gpt-helper-timestamp {
             font-size: 11px;
-            color: #999;
+            color: var(--gpt-timestamp-color);
             padding: 0 4px;
           }
 
@@ -547,6 +546,32 @@ async function showChatWindow(tab, initialMessage = '', initialResponse = '') {
             border-radius: 50%;
             display: inline-block;
             margin: 0 1px;
+          }
+
+          .gpt-helper-textarea {
+            flex: 1;
+            border: 1px solid var(--gpt-border-color);
+            border-radius: 24px;
+            padding: 12px 16px;
+            resize: none;
+            font-size: 14px;
+            line-height: 1.5;
+            font-family: inherit;
+            background-color: var(--gpt-input-bg) !important;
+            color: var(--gpt-input-text) !important;
+            outline: none;
+          }
+
+          .gpt-helper-textarea::placeholder {
+            color: var(--gpt-placeholder-color);
+          }
+
+          .gpt-helper-textarea:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+          }
+
+          .gpt-helper-textarea:focus {
+            border-color: var(--gpt-primary-color);
           }
         `;
         document.head.appendChild(style);
@@ -743,13 +768,13 @@ async function showChatWindow(tab, initialMessage = '', initialResponse = '') {
           lineHeight: '1.5',
           fontFamily: 'inherit',
           backgroundColor: 'var(--gpt-input-bg)',
-          color: 'var(--gpt-text-color)',
+          color: 'var(--gpt-input-text)',
           outline: 'none'
         });
 
         // Add hover and focus styles for textarea
         textarea.addEventListener('mouseover', () => {
-          textarea.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+          textarea.style.borderColor = 'rgba(255, 255, 255, 0.2)';
         });
 
         textarea.addEventListener('mouseout', () => {
