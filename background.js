@@ -1,14 +1,15 @@
 // Configuration
+const DEFAULT_MODEL = 'gemini-2.0-flash-lite';
 const CONFIG = {
   MAX_TOKENS: 4000,
-  API_ENDPOINT: 'https://api.openai.com/v1/chat/completions',
+  getApiEndpoint: (model) => `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent`,
   TOKEN_RATIO: 4
 };
 
 // Extension state
 let state = {
   apiKey: '',
-  selectedModel: '',
+  selectedModel: DEFAULT_MODEL,
   prompts: []
 };
 
@@ -20,7 +21,7 @@ async function loadConfig() {
     
     state = {
       apiKey: result.apiKey || '',
-      selectedModel: result.selectedModel || '',
+      selectedModel: result.selectedModel || DEFAULT_MODEL,
       prompts: Array.isArray(result.customPrompts) ? result.customPrompts : []
     };
     console.log('State after loading:', state);
@@ -143,6 +144,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 
 // Process text
 async function processText(text, promptText, tab) {
+  await loadConfig();
   if (!validateInput(text, tab)) return;
 
   try {
@@ -233,19 +235,18 @@ async function processText(text, promptText, tab) {
       args: [{ text }]
     });
 
-    // Make API request
-    const response = await fetch(CONFIG.API_ENDPOINT, {
+    // Make API request with Gemini format
+    const response = await fetch(`${CONFIG.getApiEndpoint(state.selectedModel)}?key=${state.apiKey}`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${state.apiKey}`
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: state.selectedModel,
-        messages: [
-          { role: 'system', content: promptText },
-          { role: 'user', content: text }
-        ]
+        contents: [{
+          parts: [{
+            text: `${promptText}\n\nInput: ${text}`
+          }]
+        }]
       })
     });
 
@@ -254,6 +255,9 @@ async function processText(text, promptText, tab) {
     if (!response.ok) {
       throw new Error(result.error?.message || 'API request failed');
     }
+
+    // Extract response from Gemini format
+    const generatedText = result.candidates[0].content.parts[0].text;
 
     // Show the response
     await chrome.scripting.executeScript({
@@ -308,7 +312,7 @@ async function processText(text, promptText, tab) {
         messagesContainer.appendChild(messageDiv);
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
       },
-      args: [{ response: result.choices[0].message.content }]
+      args: [{ response: generatedText }]
     });
   } catch (error) {
     console.error('Processing error:', error);
@@ -362,48 +366,27 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'chat') {
     (async () => {
       try {
-        // Get existing conversation from storage
         const { chatHistory = [] } = await chrome.storage.local.get(['chatHistory']);
         
-        // Build conversation history
-        const messages = [
-          { 
-            role: 'system', 
-            content: 'You are a helpful assistant. You have access to the original text and its processed result. Help the user with any questions or requests about the text.' 
-          }
-        ];
+        // Format chat history for Gemini
+        const contents = [{
+          parts: [{
+            text: [
+              'You are a helpful assistant.',
+              request.context.originalText ? `Original text: "${request.context.originalText}"` : '',
+              request.context.resultText ? `Previous response: ${request.context.resultText}` : '',
+              ...chatHistory.map(msg => `${msg.role}: ${msg.content}`),
+              `user: ${request.message}`
+            ].filter(Boolean).join('\n\n')
+          }]
+        }];
 
-        // Add context messages if they exist
-        if (request.context.originalText && request.context.resultText) {
-          messages.push({
-            role: 'user',
-            content: `Original text: "${request.context.originalText}"`
-          });
-          messages.push({
-            role: 'assistant',
-            content: request.context.resultText
-          });
-        }
-
-        // Add chat history
-        messages.push(...chatHistory);
-
-        // Add current message
-        messages.push({
-          role: 'user',
-          content: request.message
-        });
-
-        const response = await fetch(CONFIG.API_ENDPOINT, {
+        const response = await fetch(`${CONFIG.getApiEndpoint(state.selectedModel)}?key=${state.apiKey}`, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${state.apiKey}`
+            'Content-Type': 'application/json'
           },
-          body: JSON.stringify({
-            model: state.selectedModel,
-            messages: messages
-          })
+          body: JSON.stringify({ contents })
         });
 
         if (!response.ok) {
@@ -412,7 +395,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }
 
         const result = await response.json();
-        const assistantMessage = result.choices[0].message.content;
+        const assistantMessage = result.candidates[0].content.parts[0].text;
 
         // Update chat history
         chatHistory.push(
@@ -425,9 +408,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           chatHistory.splice(0, 2);
         }
 
-        // Save updated history
         await chrome.storage.local.set({ chatHistory });
-
         sendResponse({ message: assistantMessage });
       } catch (error) {
         sendResponse({ error: error.message });

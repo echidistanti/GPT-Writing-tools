@@ -180,7 +180,7 @@ getCustomPrompts(function(prompts) {
 });
 
 // API Key functions
-function showApiKeyStatus(isValid, errorMessage = '') {
+function showApiKeyStatus() {
   const apiKeyInput = document.getElementById('apiKey');
   let statusElement = document.querySelector('.api-key-status');
   if (!statusElement) {
@@ -188,63 +188,30 @@ function showApiKeyStatus(isValid, errorMessage = '') {
     statusElement.className = 'api-key-status';
     apiKeyInput.parentNode.appendChild(statusElement);
   }
-  if (isValid) {
-    statusElement.className = 'api-key-status valid';
-    statusElement.textContent = '✓ Valid API key';
-  } else {
-    statusElement.className = 'api-key-status invalid';
-    statusElement.textContent = '✗ Invalid API key' + (errorMessage ? `: ${errorMessage}` : '');
-  }
-}
-
-function addApiKeyTooltip() {
-  const apiKeyLabel = document.querySelector('label[for="apiKey"]');
-  const tooltip = createUniqueElement('span', 'apiKeyTooltip');
-  tooltip.className = 'info-tooltip';
-  tooltip.innerHTML = `
-    <span class="icon">ⓘ</span>
-    <span class="tooltip-text">
-      To get your OpenAI API key:
-      1. Go to platform.openai.com
-      2. Sign in or create an account
-      3. Go to the API section
-      4. Create a new API key
-      Note: Keep your API key secure and never share it.
-    </span>
-  `;
-  apiKeyLabel.appendChild(tooltip);
+  statusElement.className = 'api-key-status valid';
+  statusElement.textContent = 'API key saved';
 }
 
 // Load and Save functions
 async function loadSettings() {
   try {
-    const result = await chrome.storage.sync.get(['apiKey', 'selectedModel', 'customPrompts']);
+    const result = await chrome.storage.sync.get(['apiKey', 'customPrompts']);
     console.log('Loading settings:', result);
 
     const apiKeyInput = document.getElementById('apiKey');
-    if (apiKeyInput) {
-      apiKeyInput.value = result.apiKey || '';
+    if (apiKeyInput && result.apiKey) {
+      apiKeyInput.value = result.apiKey;
     }
 
-    if (Array.isArray(result.customPrompts) && result.customPrompts.length > 0) {
-      prompts = result.customPrompts;
-    } else {
-      prompts = [];
-      await chrome.storage.sync.set({ customPrompts: prompts });
+    // Inizializzazione più robusta dell'array prompts
+    prompts = Array.isArray(result.customPrompts) ? result.customPrompts : [];
+    
+    // Se non ci sono prompt, inizializziamo con un array vuoto
+    if (!Array.isArray(result.customPrompts)) {
+      await chrome.storage.sync.set({ customPrompts: [] });
     }
 
     originalPrompts = JSON.parse(JSON.stringify(prompts));
-
-    if (result.apiKey) {
-      await loadModels(result.apiKey);
-      if (result.selectedModel) {
-        const modelSelect = document.getElementById('model');
-        if (modelSelect) {
-          modelSelect.value = result.selectedModel;
-        }
-      }
-    }
-
     updatePromptsTable();
     updateSaveButtonState();
   } catch (error) {
@@ -253,51 +220,16 @@ async function loadSettings() {
   }
 }
 
-async function loadModels(apiKey) {
-  const modelSelect = document.getElementById('model');
-  const loadingSpinner = document.createElement('div');
-  loadingSpinner.className = 'loading-spinner';
-
+async function saveApiKey() {
+  const apiKey = document.getElementById('apiKey').value;
   try {
-    modelSelect.parentNode.appendChild(loadingSpinner);
-    modelSelect.disabled = true;
-    modelSelect.innerHTML = '<option>Loading models...</option>';
-
-    const response = await fetch('https://api.openai.com/v1/models', {
-      headers: {
-        'Authorization': `Bearer ${apiKey}`
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error(response.statusText);
-    }
-
-    const data = await response.json();
-
-    modelSelect.innerHTML = '<option value="">Select a model...</option>';
-    data.data
-      .sort((a, b) => a.id.localeCompare(b.id))
-      .forEach(model => {
-        const option = document.createElement('option');
-        option.value = model.id;
-        option.textContent = model.id;
-        modelSelect.appendChild(option);
-      });
-
-    const result = await chrome.storage.sync.get('selectedModel');
-    if (result.selectedModel) {
-      modelSelect.value = result.selectedModel;
-    }
-
-    showApiKeyStatus(true);
+    await chrome.storage.sync.set({ apiKey });
+    await chrome.runtime.sendMessage({ action: 'updateApiKey', apiKey });
+    showApiKeyStatus();
+    showSaveStatus();
   } catch (error) {
-    console.error('Error loading models:', error);
-    modelSelect.innerHTML = '<option value="">Error loading models</option>';
-    showApiKeyStatus(false, error.message);
-  } finally {
-    modelSelect.disabled = false;
-    loadingSpinner.remove();
+    console.error('Error saving API key:', error);
+    alert('Error saving API key');
   }
 }
 
@@ -442,14 +374,23 @@ function updatePrompt(id, field, value) {
 }
 
 function addNewPrompt() {
-  const maxId = prompts.reduce((max, p) => Math.max(max, p.id), 0);
+  // Assicuriamoci che prompts sia un array
+  if (!Array.isArray(prompts)) {
+    prompts = [];
+  }
+
+  // Gestione sicura dell'ID quando non ci sono prompt
+  const maxId = prompts.length > 0 
+    ? prompts.reduce((max, p) => Math.max(max, p.id || 0), 0) 
+    : 0;
+
   const newPrompt = {
     id: maxId + 1,
     name: getMessage('newPromptName'),
     prompt: getMessage('newPromptText')
   };
 
-  prompts = [...prompts, newPrompt];
+  prompts.push(newPrompt); // Usiamo push invece dello spread operator
   hasUnsavedChanges = true;
   updatePromptsTable();
   updateSaveButtonState();
@@ -467,6 +408,22 @@ function deletePrompt(id) {
 // Save Functions
 async function savePrompts() {
   try {
+    // Validazione dei dati prima del salvataggio
+    if (!Array.isArray(prompts)) {
+      throw new Error('Prompts must be an array');
+    }
+
+    // Verifica che ogni prompt abbia i campi richiesti
+    const validPrompts = prompts.every(p => 
+      p && typeof p.id === 'number' && 
+      typeof p.name === 'string' && 
+      typeof p.prompt === 'string'
+    );
+
+    if (!validPrompts) {
+      throw new Error('Invalid prompt format');
+    }
+
     console.log('Saving prompts:', prompts);
     await chrome.storage.sync.set({ customPrompts: prompts });
     originalPrompts = JSON.parse(JSON.stringify(prompts));
@@ -476,30 +433,7 @@ async function savePrompts() {
     showSaveStatus();
   } catch (error) {
     console.error('Error saving prompts:', error);
-    alert(getMessage('errorSavingPrompts'));
-  }
-}
-
-async function saveApiKey() {
-  const apiKey = document.getElementById('apiKey').value;
-  try {
-    await chrome.storage.sync.set({ apiKey });
-    await loadModels(apiKey);
-    showSaveStatus();
-  } catch (error) {
-    console.error('Error saving API key:', error);
-    showApiKeyStatus(false, error.message);
-  }
-}
-
-async function saveModel() {
-  const modelSelect = document.getElementById('model');
-  try {
-    await chrome.storage.sync.set({ selectedModel: modelSelect.value });
-    showSaveStatus();
-  } catch (error) {
-    console.error('Error saving model:', error);
-    alert('Error saving model selection');
+    alert(getMessage('errorSavingPrompts') + ': ' + error.message);
   }
 }
 
@@ -524,20 +458,18 @@ function showSaveStatus() {
 // Event Listeners Setup
 function setupEventListeners() {
   const apiKeyInput = document.getElementById('apiKey');
-  const modelSelect = document.getElementById('model');
   const addPromptButton = document.getElementById('addPrompt');
   const savePromptsButton = document.getElementById('savePrompts');
   const saveApiKeyButton = document.getElementById('saveApiKey');
-  const saveModelButton = document.getElementById('saveModel');
-  const exportSettingsButton = document.getElementById('exportSettings'); // New button
-  const importSettingsButton = document.getElementById('importSettings'); // New button
+  const exportSettingsButton = document.getElementById('exportSettings');
+  const importSettingsButton = document.getElementById('importSettings');
 
   if (saveApiKeyButton) {
     saveApiKeyButton.addEventListener('click', saveApiKey);
   }
 
-  if (saveModelButton) {
-    saveModelButton.addEventListener('click', saveModel);
+  if (apiKeyInput) {
+    apiKeyInput.addEventListener('change', () => saveApiKey());
   }
 
   if (addPromptButton) {
@@ -549,20 +481,17 @@ function setupEventListeners() {
   }
 
   if (exportSettingsButton) {
-    exportSettingsButton.addEventListener('click', exportSettings); // New event listener
+    exportSettingsButton.addEventListener('click', exportSettings);
   }
 
   if (importSettingsButton) {
-    importSettingsButton.addEventListener('change', importSettings); // New event listener
+    importSettingsButton.addEventListener('change', importSettings);
   }
-
-  addApiKeyTooltip();
 }
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
   initializeI18n();
-  addApiKeyTooltip();
   await loadSettings();
 
   // Import button handler
