@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="styles/options.css">
+</head>
+<body>
+    <div class="container">
+        <div class="section">
+            <h2 data-i18n="settingsTitle">GPT Helper Settings</h2>
+            <div class="form-group">
+                <label for="apiKey" data-i18n="apiKeyLabel">API Key:</label>
+                <div class="input-group">
+                    <input type="password" id="apiKey" required>
+                    <button id="saveApiKey" class="button" type="button" data-i18n="buttonSaveApiKey">Save API Key</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2 data-i18n="promptsManagementTitle">Prompts Management</h2>
+            <table id="promptsTable" class="table">
+                <thead>
+                    <tr>
+                        <th data-i18n="columnName">Name</th>
+                        <th data-i18n="columnPrompt">Prompt</th>
+                        <th data-i18n="columnActions">Actions</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+            <div class="button-group">
+                <button id="addPrompt" class="button" type="button" data-i18n="buttonAdd">Add Prompt</button>
+                <button id="savePrompts" class="button" type="button" data-i18n="buttonSave">Save Changes</button>
+                <button id="exportSettings" class="button" type="button" data-i18n="buttonExport">Export Settings</button>
+                <button id="importSettings" class="button" type="button" data-i18n="buttonImport">Import Settings</button>
+                <span id="saveStatus" class="save-status" data-i18n="saveSuccess">Changes saved!</span>
+            </div>
+        </div>
+    </div>
+    <script src="options.js"></script>
+</body>
+</html>

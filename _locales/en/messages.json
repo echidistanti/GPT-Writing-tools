@@ -1,0 +1,131 @@
+{
+    "extName": {
+      "message": "GPT Writing Tools"
+    },
+    "extDescription": {
+      "message": "Process selected text with GPT models using custom prompts"
+    },
+    "settingsTitle": {
+      "message": "GPT Helper Settings"
+    },
+    "apiKeyLabel": {
+      "message": "OpenAI API Key:"
+    },
+    "modelLabel": {
+      "message": "Model:"
+    },
+    "promptsManagementTitle": {
+      "message": "Prompts Management"
+    },
+    "columnName": {
+      "message": "Name"
+    },
+    "columnPrompt": {
+      "message": "Prompt"
+    },
+    "columnActions": {
+      "message": "Actions"
+    },
+    "buttonAdd": {
+      "message": "➕ Add Prompt"
+    },
+    "buttonSave": {
+      "message": "💾 Save Changes"
+    },
+    "buttonDelete": {
+      "message": "❌ Delete"
+    },
+    "saveSuccess": {
+      "message": "Changes saved!"
+    },
+    "confirmDelete": {
+      "message": "Are you sure you want to delete this prompt?"
+    },
+    "newPromptName": {
+      "message": "New Prompt"
+    },
+    "newPromptText": {
+      "message": "Enter prompt text"
+    },
+    "errorLoadingSettings": {
+      "message": "Error loading settings"
+    },
+    "errorLoadingModels": {
+      "message": "Error loading models. Check your API key."
+    },
+    "errorSavingPrompts": {
+      "message": "Error saving prompts"
+    },
+    "errorSavingSettings": {
+      "message": "Error saving settings"
+    },
+    "errorProcessingText": {
+      "message": "Error processing text"
+    },
+    "errorShowingResult": {
+      "message": "Error showing result"
+    },
+    "errorCopying": {
+      "message": "Error copying text"
+    },
+    "contextMenuTitle": {
+      "message": "GPT Helper"
+    },
+    "resultTitle": {
+      "message": "GPT Result"
+    },
+    "originalTextLabel": {
+      "message": "Original text:"
+    },
+    "resultTextLabel": {
+      "message": "Result:"
+    },
+    "copyButton": {
+      "message": "Copy result"
+    },
+    "copiedStatus": {
+      "message": "Copied!"
+    },
+    "noTextSelected": {
+      "message": "Please select some text."
+    },
+    "textTooLong": {
+      "message": "The selected text is too long. Please select a shorter text."
+    },
+    "loadingTitle": {
+      "message": "Processing"
+    },
+    "loadingText": {
+      "message": "Processing your text..."
+    },
+    "loadingWait": {
+      "message": "Please wait"
+    },
+    "buttonSaveApiKey": {
+      "message": "🔑 Save API Key"
+    },
+    "buttonSaveModel": {
+      "message": "💾 Save Model"
+    },
+    "selectModel": {
+      "message": "Select a model..."
+    },
+    "enterCustomPrompt": {
+      "message": "Enter your custom prompt:"
+    },
+    "buttonExport": {
+      "message": "📤 Export Settings"
+    },
+    "buttonImport": {
+      "message": "📥 Import Settings"
+    },
+    "chatButton": {
+      "message": "💬 Chat"
+    },
+    "chatPlaceholder": {
+      "message": "Type your message here..."
+    },
+    "sendButton": {
+      "message": "Send"
+    }
+}
